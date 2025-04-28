@@ -1,0 +1,14 @@
+CREATE TABLE quizzes (
+  id INT NOT NULL AUTO_INCREMENT,
+  course_id INT NOT NULL,
+  class_id INT NOT NULL,
+  question_id INT NOT NULL,
+  deadline INT NOT NULL,
+  status ENUM('selesai', 'belum selesai') NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
+) ENGINE = InnoDB;
