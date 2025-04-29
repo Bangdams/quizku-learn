@@ -3,7 +3,7 @@ CREATE TABLE quizzes (
   course_id INT NOT NULL,
   class_id INT NOT NULL,
   question_id INT NOT NULL,
-  deadline INT NOT NULL,
+  deadline Date NOT NULL,
   status ENUM('selesai', 'belum selesai') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
