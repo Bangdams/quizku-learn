@@ -10,4 +10,6 @@ type UserClass struct {
 	ClassId   uint `gorm:"not null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Class     Class `gorm:"foreignKey:class_id;references:id"`
+	User      *User `gorm:"foreignKey:user_id;references:id"`
 }

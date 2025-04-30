@@ -14,4 +14,6 @@ type QuizzResult struct {
 	IncorrectAnswerCount uint   `gorm:"not null"`
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
+	Quiz                 Quiz `gorm:"foreignKey:quizz_id;references:id"`
+	User                 User `gorm:"foreignKey:user_id;references:id"`
 }
