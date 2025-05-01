@@ -25,6 +25,7 @@ type UpdateUserPasswordRequest struct {
 
 type UpdateUserRequest struct {
 	ID       uint   `json:"id"`
+	Email    string `json:"email" validate:"required"`
 	Name     string `json:"name" validate:"required"`
 	Password string `json:"password" validate:"required"`
 	Image    string `json:"image" validate:"required"`
