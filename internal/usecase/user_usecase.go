@@ -178,7 +178,8 @@ func (userUsecase *UserUsecaseImpl) Login(ctx context.Context, request *model.Lo
 		return nil, fiber.ErrUnauthorized
 	}
 
-	token, err := util.GenerateTokenJWT(user)
+	accessToken, err := util.GenerateAccessToken(user)
+	// refreshToken, err := util.GenerateAccessToken(user)
 	if err != nil {
 		log.Println("Failed to generate token jwt")
 		return nil, fiber.ErrInternalServerError
@@ -191,7 +192,7 @@ func (userUsecase *UserUsecaseImpl) Login(ctx context.Context, request *model.Lo
 
 	log.Println("success login")
 
-	return converter.LoginUserToResponse(token), nil
+	return converter.LoginUserToResponse(accessToken), nil
 }
 
 // Search implements UserUsecase.
