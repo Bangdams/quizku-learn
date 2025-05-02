@@ -1,11 +1,8 @@
 package config
 
 import (
-	"os"
-
-	jwtware "github.com/gofiber/contrib/jwt"
+	middelware "github.com/Bangdams/quizku-learn/internal/delivery/http/middleware"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 )
 
 func NewFiber() *fiber.App {
@@ -14,18 +11,7 @@ func NewFiber() *fiber.App {
 		ErrorHandler: NewErrorHandler(),
 	})
 
-	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://127.0.0.1:5500/",
-		AllowCredentials: true,
-	}))
-
-	app.Use("/api", jwtware.New(jwtware.Config{
-		TokenLookup: "cookie:token",
-		SigningKey: jwtware.SigningKey{
-			Key: []byte(os.Getenv("SECRET_KEY")),
-		},
-		ContextKey: "user",
-	}))
+	middelware.Middelware(app)
 
 	return app
 }
