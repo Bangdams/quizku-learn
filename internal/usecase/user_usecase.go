@@ -63,6 +63,7 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 		Name:     request.Name,
 		Password: string(password),
 		Role:     request.Role,
+		Image:    request.Image,
 	}
 
 	if err := userUsecase.UserRepo.FindByEmail(tx, user); err == nil {
