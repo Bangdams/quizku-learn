@@ -19,13 +19,13 @@ type UserRepositoryImpl struct {
 	Repository[entity.User]
 }
 
+func NewUserRepository() UserRepository {
+	return &UserRepositoryImpl{}
+}
+
 // FindAll implements UserRepository.
 func (repository *UserRepositoryImpl) FindAll(tx *gorm.DB, userId uint, users *[]entity.User) error {
 	return tx.Not("id = ?", userId).Find(users).Error
-}
-
-func NewUserRepository() UserRepository {
-	return &UserRepositoryImpl{}
 }
 
 // Login implements UserRepository.
