@@ -1,4 +1,4 @@
-# Quizku FE
+# Quizku
 
 ## Deskripsi
 
