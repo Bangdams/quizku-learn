@@ -3,11 +3,11 @@ CREATE TABLE questions (
   name VARCHAR(200) NOT NULL,
   question_count INT NOT NULL,
   duration INT NOT NULL,
-  course_id INT NOT NULL,
+  course_code VARCHAR(3) NOT NULL,
   user_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+  FOREIGN KEY (course_code) REFERENCES courses(course_code) ON DELETE CASCADE
 ) ENGINE = InnoDB;
