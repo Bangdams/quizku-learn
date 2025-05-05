@@ -6,9 +6,11 @@ import (
 )
 
 type CourseRepository interface {
-	Create(tx *gorm.DB, user *entity.Course) error
-	Update(tx *gorm.DB, user *entity.Course) error
-	Delete(tx *gorm.DB, user *entity.Course) error
+	Create(tx *gorm.DB, course *entity.Course) error
+	Update(tx *gorm.DB, course *entity.Course) error
+	Delete(tx *gorm.DB, course *entity.Course) error
+	FindByCourseCode(tx *gorm.DB, course *entity.Course) error
+	FindAll(tx *gorm.DB, courses *[]entity.Course) error
 }
 
 type CourseRepositoryImpl struct {
@@ -17,4 +19,14 @@ type CourseRepositoryImpl struct {
 
 func NewCourseRepository() CourseRepository {
 	return &CourseRepositoryImpl{}
+}
+
+// FindByCourseCode implements CourseRepository.
+func (repository *CourseRepositoryImpl) FindAll(tx *gorm.DB, courses *[]entity.Course) error {
+	return tx.Find(courses).Error
+}
+
+// FindByCourseCode implements CourseRepository.
+func (repository *CourseRepositoryImpl) FindByCourseCode(tx *gorm.DB, course *entity.Course) error {
+	return tx.First(course, "course_code=?", course.CourseCode).Error
 }

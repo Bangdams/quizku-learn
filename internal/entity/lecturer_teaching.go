@@ -12,6 +12,6 @@ type LecturerTeaching struct {
 	CreatedAt                 time.Time
 	UpdatedAt                 time.Time
 	Class                     Class    `gorm:"foreignKey:class_id;references:id"`
-	LecturerCourseAssignments []Course `gorm:"many2many:lecturer_course_assignments;foreignKey:id;joinForeignKey:lecturer_teaching_code;references:id;joinReferences:course_id"`
+	LecturerCourseAssignments []Course `gorm:"many2many:lecturer_course_assignments;foreignKey:id;joinForeignKey:lecturer_teaching_code;references:course_code;joinReferences:course_code"`
 	User                      User     `gorm:"foreignKey:user_id;references:id"`
 }

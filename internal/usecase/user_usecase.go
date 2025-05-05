@@ -2,7 +2,11 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"log"
+	"os"
+	"strconv"
+	"time"
 
 	"github.com/Bangdams/quizku-learn/internal/entity"
 	"github.com/Bangdams/quizku-learn/internal/model"
@@ -19,26 +23,96 @@ import (
 type UserUsecase interface {
 	Create(ctx context.Context, request *model.UserRequest) (*model.UserResponse, error)
 	Update(ctx context.Context, request *model.UpdateUserRequest) (*model.UserResponse, error)
-	UpdatePassword(ctx context.Context, request *model.UpdateUserPasswordRequest) (*model.UserResponse, error)
 	Delete(ctx context.Context, request *model.DeleteUserRequest) error
 	FindAll(ctx context.Context, userId uint) (*[]model.UserResponse, error)
 	FindByEmail(ctx context.Context, emailRequest string) (*model.UserResponse, error)
 	Search(ctx context.Context, keyword string) (*[]model.UserResponse, error)
-	Login(ctx context.Context, request *model.LoginRequest) (*model.LoginResponse, error)
+	Login(ctx context.Context, request *model.LoginRequest, requestRefreshToken string) (*model.LoginResponse, string, error)
+	Logout(ctx context.Context, refreshToken string) error
+	Refresh(ctx context.Context, refreshToken string) (*model.LoginResponse, error)
 }
 
 type UserUsecaseImpl struct {
-	UserRepo repository.UserRepository
-	DB       *gorm.DB
-	Validate *validator.Validate
+	UserRepo         repository.UserRepository
+	RefreshTokenRepo repository.RefreshTokenRepository
+	DB               *gorm.DB
+	Validate         *validator.Validate
 }
 
-func NewUserUsecase(userRepo repository.UserRepository, DB *gorm.DB, validate *validator.Validate) UserUsecase {
+func NewUserUsecase(userRepo repository.UserRepository, RefreshTokenRepo repository.RefreshTokenRepository, DB *gorm.DB, validate *validator.Validate) UserUsecase {
 	return &UserUsecaseImpl{
-		UserRepo: userRepo,
-		DB:       DB,
-		Validate: validate,
+		UserRepo:         userRepo,
+		RefreshTokenRepo: RefreshTokenRepo,
+		DB:               DB,
+		Validate:         validate,
 	}
+}
+
+// Logout implements UserUsecase.
+func (userUsecase *UserUsecaseImpl) Logout(ctx context.Context, refreshToken string) error {
+	tx := userUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	claims, err := util.ParseToken(refreshToken, []byte(os.Getenv("SECRET_KEY")))
+	if err != nil {
+		return fiber.ErrUnauthorized
+	}
+
+	userId := claims["user_id"].(float64)
+
+	if err := userUsecase.RefreshTokenRepo.FindById(tx, uint(userId)); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Println("Logout failed because the user has not logged in.")
+			return fiber.ErrBadRequest
+		} else {
+			log.Println("Error RefreshToken findbyid:", err)
+			return fiber.ErrInternalServerError
+		}
+	} else {
+		log.Println("Logout successful.")
+		userUsecase.RefreshTokenRepo.Update(tx, &entity.RefreshToken{UserId: uint(userId), StatusLogout: 1})
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return nil
+}
+
+// Refresh implements UserUsecase.
+func (userUsecase *UserUsecaseImpl) Refresh(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
+	tx := userUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	claims, err := util.ParseToken(refreshToken, []byte(os.Getenv("SECRET_KEY")))
+	if err != nil {
+		return nil, fiber.ErrUnauthorized
+	}
+
+	userId := claims["user_id"].(float64)
+	request := entity.User{
+		ID:    uint(userId),
+		Name:  claims["name"].(string),
+		Email: claims["email"].(string),
+		Role:  claims["role"].(string),
+	}
+
+	if err := userUsecase.RefreshTokenRepo.CheckStatusLogout(tx, uint(userId)); err != nil {
+		return nil, fiber.ErrUnauthorized
+	}
+
+	newAccessToken, _ := util.GenerateAccessToken(&request)
+
+	log.Println("success create access token")
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return converter.LoginUserToResponse(newAccessToken), nil
 }
 
 // Create implements UserUsecase.
@@ -67,7 +141,7 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 	}
 
 	if err := userUsecase.UserRepo.FindByEmail(tx, user); err == nil {
-		log.Println("duplicate email : ", err)
+		log.Println("duplicate email : ", user.Email)
 		return nil, fiber.ErrConflict
 	}
 
@@ -163,7 +237,14 @@ func (userUsecase *UserUsecaseImpl) FindByEmail(ctx context.Context, emailReques
 }
 
 // Login implements UserUsecase.
-func (userUsecase *UserUsecaseImpl) Login(ctx context.Context, request *model.LoginRequest) (*model.LoginResponse, error) {
+func (userUsecase *UserUsecaseImpl) Login(ctx context.Context, request *model.LoginRequest, requestRefreshTokenUser string) (*model.LoginResponse, string, error) {
+	now := time.Now()
+
+	_, err := util.ParseToken(requestRefreshTokenUser, []byte(os.Getenv("SECRET_KEY")))
+	if err == nil {
+		return nil, "", fiber.NewError(fiber.StatusBadRequest, "Refresh token still valid")
+	}
+
 	tx := userUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
@@ -171,29 +252,57 @@ func (userUsecase *UserUsecaseImpl) Login(ctx context.Context, request *model.Lo
 
 	if err := userUsecase.UserRepo.Login(tx, user, request.Email); err != nil {
 		log.Println("invalid Email : ", err)
-		return nil, fiber.ErrUnauthorized
+		return nil, "", fiber.ErrUnauthorized
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
 		log.Println("invalid password : ", err)
-		return nil, fiber.ErrUnauthorized
+		return nil, "", fiber.ErrUnauthorized
 	}
 
 	accessToken, err := util.GenerateAccessToken(user)
-	// refreshToken, err := util.GenerateAccessToken(user)
 	if err != nil {
 		log.Println("Failed to generate token jwt")
-		return nil, fiber.ErrInternalServerError
+		return nil, "", fiber.ErrInternalServerError
+	}
+
+	refreshToken, err := util.GenerateRefreshToken(user)
+	if err != nil {
+		log.Println("Failed to generate token jwt")
+		return nil, "", fiber.ErrInternalServerError
+	}
+
+	duration := os.Getenv("DURATION_JWT_REFRESH_TOKEN")
+	lifeTime, _ := strconv.Atoi(duration)
+
+	requestRefreshToken := &entity.RefreshToken{
+		UserId:       user.ID,
+		StatusLogout: 0,
+		Token:        refreshToken,
+		ExpiresAt:    now.Add(time.Minute * time.Duration(lifeTime)),
+	}
+
+	if err := userUsecase.RefreshTokenRepo.FindById(tx, user.ID); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Println("Creating new refresh token in database")
+			userUsecase.RefreshTokenRepo.Create(tx, requestRefreshToken)
+		} else {
+			log.Println("Error fetching refresh token:", err)
+			return nil, "", fiber.ErrInternalServerError
+		}
+	} else {
+		log.Println("Updating existing refresh token in database")
+		userUsecase.RefreshTokenRepo.Update(tx, requestRefreshToken)
 	}
 
 	if err := tx.Commit().Error; err != nil {
 		log.Println("Failed commit transaction : ", err)
-		return nil, fiber.ErrInternalServerError
+		return nil, "", fiber.ErrInternalServerError
 	}
 
 	log.Println("success login")
 
-	return converter.LoginUserToResponse(accessToken), nil
+	return converter.LoginUserToResponse(accessToken), refreshToken, nil
 }
 
 // Search implements UserUsecase.
@@ -272,9 +381,4 @@ func (userUsecase *UserUsecaseImpl) Update(ctx context.Context, request *model.U
 	log.Println("success update from usecase user")
 
 	return converter.UserToResponse(user), nil
-}
-
-// UpdatePassword implements UserUsecase.
-func (*UserUsecaseImpl) UpdatePassword(ctx context.Context, request *model.UpdateUserPasswordRequest) (*model.UserResponse, error) {
-	panic("unimplemented")
 }

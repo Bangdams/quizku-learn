@@ -5,7 +5,7 @@ type QuestionResponse struct {
 	Name          uint `json:"name" validate:"required"`
 	QuestionCount uint `json:"question_count" validate:"required"`
 	Duration      uint `json:"duration" validate:"required"`
-	CourseId      uint `json:"course_id" validate:"required"`
+	CourseCode    uint `json:"course_code" validate:"required"`
 	UserId        uint `json:"user_id" validate:"required"`
 }
 
@@ -14,6 +14,6 @@ type QuestionRequest struct {
 	Name          uint `json:"name" validate:"required"`
 	QuestionCount uint `json:"question_count" validate:"required"`
 	Duration      uint `json:"duration" validate:"required"`
-	CourseId      uint `json:"course_id" validate:"required"`
+	CourseCode    uint `json:"course_code" validate:"required"`
 	UserId        uint `json:"user_id" validate:"required"`
 }

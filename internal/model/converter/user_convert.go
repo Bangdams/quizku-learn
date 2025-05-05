@@ -12,8 +12,10 @@ func UserToResponse(user *entity.User) *model.UserResponse {
 
 	return &model.UserResponse{
 		ID:    user.ID,
+		Name:  user.Name,
 		Email: user.Email,
 		Role:  user.Role,
+		Image: user.Image,
 	}
 }
 
