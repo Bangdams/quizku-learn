@@ -23,7 +23,7 @@ import (
 type UserUsecase interface {
 	Create(ctx context.Context, request *model.UserRequest) (*model.UserResponse, error)
 	Update(ctx context.Context, request *model.UpdateUserRequest) (*model.UserResponse, error)
-	Delete(ctx context.Context, request *model.DeleteUserRequest) error
+	Delete(ctx context.Context, userId uint) error
 	FindAll(ctx context.Context, userId uint) (*[]model.UserResponse, error)
 	FindByEmail(ctx context.Context, emailRequest string) (*model.UserResponse, error)
 	Search(ctx context.Context, keyword string) (*[]model.UserResponse, error)
@@ -162,20 +162,14 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 }
 
 // Delete implements UserUsecase.
-func (userUsecase *UserUsecaseImpl) Delete(ctx context.Context, request *model.DeleteUserRequest) error {
+func (userUsecase *UserUsecaseImpl) Delete(ctx context.Context, userId uint) error {
 	tx := userUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	err := userUsecase.Validate.Struct(request)
-	if err != nil {
-		log.Println("Invalid request Body : ", err)
-		return fiber.ErrBadRequest
-	}
-
 	user := &entity.User{}
-	user.ID = request.ID
+	user.ID = userId
 
-	err = userUsecase.UserRepo.Delete(tx, user)
+	err := userUsecase.UserRepo.Delete(tx, user)
 	if err != nil {
 		log.Println("failed when delete repo user : ", err)
 		return fiber.ErrInternalServerError

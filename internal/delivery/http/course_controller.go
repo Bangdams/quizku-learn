@@ -72,11 +72,7 @@ func (controller *CourseControllerImpl) Create(ctx *fiber.Ctx) error {
 
 // Delete implements CourseController.
 func (controller *CourseControllerImpl) Delete(ctx *fiber.Ctx) error {
-	request := new(model.DeleteCourseRequest)
-
-	request.CourseCode = ctx.Params("course_code")
-
-	if err := controller.CourseUsecase.Delete(ctx.UserContext(), request); err != nil {
+	if err := controller.CourseUsecase.Delete(ctx.UserContext(), ctx.Params("course_code")); err != nil {
 		log.Println("failed to delete course : ", err)
 		return err
 	}

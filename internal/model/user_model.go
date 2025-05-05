@@ -30,10 +30,6 @@ type UpdateUserRequest struct {
 	Image    string `json:"image" validate:"required"`
 }
 
-type DeleteUserRequest struct {
-	ID uint `json:"id" validate:"required"`
-}
-
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`

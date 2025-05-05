@@ -69,12 +69,9 @@ func (controller *UserControllerImpl) Create(ctx *fiber.Ctx) error {
 
 // Delete implements UserController.
 func (controller UserControllerImpl) Delete(ctx *fiber.Ctx) error {
-	request := new(model.DeleteUserRequest)
-
 	id, _ := ctx.ParamsInt("id")
-	request.ID = uint(id)
 
-	if err := controller.UserUsecase.Delete(ctx.UserContext(), request); err != nil {
+	if err := controller.UserUsecase.Delete(ctx.UserContext(), uint(id)); err != nil {
 		log.Println("failed to delete user : ", err)
 		return err
 	}

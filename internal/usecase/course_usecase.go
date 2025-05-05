@@ -17,7 +17,7 @@ import (
 type CourseUsecase interface {
 	Create(ctx context.Context, request *model.CourseRequest) (*model.CourseResponse, error)
 	Update(ctx context.Context, request *model.CourseRequestUpdate) (*model.CourseResponse, error)
-	Delete(ctx context.Context, request *model.DeleteCourseRequest) error
+	Delete(ctx context.Context, courseCode string) error
 	FindAll(ctx context.Context) (*[]model.CourseResponse, error)
 	FindByCourseCode(ctx context.Context, courseCode string) (*model.CourseResponse, error)
 }
@@ -115,20 +115,14 @@ func (courseUsecase *CourseUsecaseImpl) Create(ctx context.Context, request *mod
 }
 
 // Delete implements CourseUsecase.
-func (courseUsecase *CourseUsecaseImpl) Delete(ctx context.Context, request *model.DeleteCourseRequest) error {
+func (courseUsecase *CourseUsecaseImpl) Delete(ctx context.Context, courseCode string) error {
 	tx := courseUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	err := courseUsecase.Validate.Struct(request)
-	if err != nil {
-		log.Println("Invalid request Body : ", err)
-		return fiber.ErrBadRequest
-	}
-
 	course := &entity.Course{}
-	course.CourseCode = request.CourseCode
+	course.CourseCode = courseCode
 
-	err = courseUsecase.CourseRepo.Delete(tx, course)
+	err := courseUsecase.CourseRepo.Delete(tx, course)
 	if err != nil {
 		log.Println("failed when delete repo course : ", err)
 		return fiber.ErrInternalServerError

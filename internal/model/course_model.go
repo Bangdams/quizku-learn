@@ -16,10 +16,6 @@ type CourseRequestUpdate struct {
 	Name          string `json:"name" validate:"required"`
 }
 
-type DeleteCourseRequest struct {
-	CourseCode string `json:"course_code" validate:"required"`
-}
-
 type CourseRequestCourseCode struct {
 	CourseCode string `json:"course_code" validate:"required"`
 }
