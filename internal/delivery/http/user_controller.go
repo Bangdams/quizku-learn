@@ -2,6 +2,9 @@ package http
 
 import (
 	"log"
+	"os"
+	"strconv"
+	"time"
 
 	"github.com/Bangdams/quizku-learn/internal/model"
 	"github.com/Bangdams/quizku-learn/internal/usecase"
@@ -12,11 +15,12 @@ import (
 type UserController interface {
 	Create(ctx *fiber.Ctx) error
 	Update(ctx *fiber.Ctx) error
-	UpdatePassword(ctx *fiber.Ctx) error
 	Delete(ctx *fiber.Ctx) error
 	FindAll(ctx *fiber.Ctx) error
 	FindByEmail(ctx *fiber.Ctx) error
 	Login(ctx *fiber.Ctx) error
+	Logout(ctx *fiber.Ctx) error
+	Refresh(ctx *fiber.Ctx) error
 }
 
 type UserControllerImpl struct {
@@ -27,6 +31,22 @@ func NewUserController(userUsecase usecase.UserUsecase) UserController {
 	return &UserControllerImpl{
 		UserUsecase: userUsecase,
 	}
+}
+
+// Refresh implements UserController.
+func (controller *UserControllerImpl) Refresh(ctx *fiber.Ctx) error {
+	cookie := ctx.Cookies("refresh_token")
+	if cookie == "" {
+		return ctx.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	response, err := controller.UserUsecase.Refresh(ctx.UserContext(), cookie)
+	if err != nil {
+		log.Println("failed to create refresh token : ", err)
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.LoginResponse]{Data: response})
 }
 
 // Create implements UserController.
@@ -105,6 +125,8 @@ func (controller *UserControllerImpl) FindByEmail(ctx *fiber.Ctx) error {
 
 // Login implements UserController.
 func (controller *UserControllerImpl) Login(ctx *fiber.Ctx) error {
+	cookie := ctx.Cookies("refresh_token")
+
 	request := new(model.LoginRequest)
 
 	if err := ctx.BodyParser(request); err != nil {
@@ -112,13 +134,48 @@ func (controller *UserControllerImpl) Login(ctx *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	response, err := controller.UserUsecase.Login(ctx.UserContext(), request)
+	response, refreshToken, err := controller.UserUsecase.Login(ctx.UserContext(), request, cookie)
 	if err != nil {
-		log.Println("failed to create user : ", err)
+		log.Println("failed to login : ", err)
 		return err
 	}
 
+	// durasi refreshToken
+	duration := os.Getenv("DURATION_JWT_REFRESH_TOKEN")
+	lifeTime, _ := strconv.Atoi(duration)
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HTTPOnly: true,
+		Secure:   true,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * lifeTime,
+	})
+
 	return ctx.JSON(model.WebResponse[*model.LoginResponse]{Data: response})
+}
+
+// Logout implements UserController.
+func (controller *UserControllerImpl) Logout(ctx *fiber.Ctx) error {
+	cookie := ctx.Cookies("refresh_token")
+	if cookie == "" {
+		return ctx.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	err := controller.UserUsecase.Logout(ctx.UserContext(), cookie)
+	if err != nil {
+		return err
+	}
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+	})
+
+	return ctx.JSON(model.WebResponse[string]{Data: "Logout successful"})
 }
 
 // Update implements UserController.
@@ -133,30 +190,6 @@ func (controller *UserControllerImpl) Update(ctx *fiber.Ctx) error {
 	response, err := controller.UserUsecase.Update(ctx.UserContext(), request)
 	if err != nil {
 		log.Println("failed to update user : ", err)
-		return err
-	}
-
-	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
-}
-
-// UpdatePassword implements UserController.
-func (controller *UserControllerImpl) UpdatePassword(ctx *fiber.Ctx) error {
-	request := new(model.UpdateUserPasswordRequest)
-
-	userToken := ctx.Locals("user").(*jwt.Token)
-	claims := userToken.Claims.(jwt.MapClaims)
-	userId := uint(claims["user_id"].(float64))
-
-	request.ID = userId
-
-	if err := ctx.BodyParser(request); err != nil {
-		log.Println("failed to parse request : ", err)
-		return fiber.ErrBadRequest
-	}
-
-	response, err := controller.UserUsecase.UpdatePassword(ctx.UserContext(), request)
-	if err != nil {
-		log.Println("failed to update password user : ", err)
 		return err
 	}
 

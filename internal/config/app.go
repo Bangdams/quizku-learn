@@ -19,16 +19,21 @@ type BootstrapConfig struct {
 func Bootstrap(config *BootstrapConfig) {
 	// repo
 	userRepo := repository.NewUserRepository()
+	refreshTokenRepo := repository.NewRefreshTokenRepository()
+	courseRepo := repository.NewCourseRepository()
 
 	// usecase
-	userUsecase := usecase.NewUserUsecase(userRepo, config.DB, config.Validate)
+	userUsecase := usecase.NewUserUsecase(userRepo, refreshTokenRepo, config.DB, config.Validate)
+	courseUsecase := usecase.NewCourseUsecase(courseRepo, config.DB, config.Validate)
 
 	// controller
 	userController := http.NewUserController(userUsecase)
+	courseController := http.NewCourseController(courseUsecase)
 
 	routeConfig := route.RouteConfig{
-		App:            config.App,
-		UserController: userController,
+		App:              config.App,
+		UserController:   userController,
+		CourseController: courseController,
 	}
 
 	routeConfig.Setup()
