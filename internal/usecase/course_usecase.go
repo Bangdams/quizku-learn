@@ -121,26 +121,18 @@ func (courseUsecase *CourseUsecaseImpl) Create(ctx context.Context, request *mod
 		Name:       request.Name,
 	}
 
+	if _, err := courseUsecase.FindByCourseCode(ctx, request.CourseCode); err == nil {
+		errorResponse.Message = "Duplicate entry"
+		errorResponse.Details = []string{"CourseCode already exists in the database."}
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
+	}
+
 	err = courseUsecase.CourseRepo.Create(tx, course)
 	if err != nil {
-		mysqlErr := err.(*mysql.MySQLError)
 		log.Println("failed when create repo course : ", err)
-
-		var errorField string
-		parts := strings.Split(mysqlErr.Message, "'")
-		if len(parts) > 2 {
-			errorField = parts[1]
-		}
-
-		if mysqlErr.Number == 1062 {
-			errorResponse.Message = "Duplicate entry"
-			errorResponse.Details = []string{errorField + " already exists in the database."}
-
-			jsonString, _ := json.Marshal(errorResponse)
-
-			return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
-		}
-
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -240,10 +232,21 @@ func (courseUsecase *CourseUsecaseImpl) Update(ctx context.Context, request *mod
 	err = courseUsecase.CourseRepo.Update(tx, course)
 	if err != nil {
 		mysqlErr := err.(*mysql.MySQLError)
-		log.Println("failed when update repo course : ", err.Error())
+		log.Println("failed when update repo course : ", err)
+
+		var errorField string
+		parts := strings.Split(mysqlErr.Message, "'")
+		if len(parts) > 2 {
+			errorField = parts[1]
+		}
 
 		if mysqlErr.Number == 1062 {
-			return nil, fiber.ErrConflict
+			errorResponse.Message = "Duplicate entry"
+			errorResponse.Details = []string{errorField + " already exists in the database."}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
 		}
 
 		return nil, fiber.ErrInternalServerError
