@@ -16,6 +16,7 @@ type UserRequest struct {
 	Password string `json:"password" validate:"required"`
 	Role     string `json:"role" validate:"required"`
 	Image    string `json:"image" validate:"required"`
+	ClassId  uint   `json:"class_id"`
 }
 
 type UpdateUserPasswordRequest struct {

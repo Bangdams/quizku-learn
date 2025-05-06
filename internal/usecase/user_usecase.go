@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Bangdams/quizku-learn/internal/entity"
@@ -37,14 +38,16 @@ type UserUsecase interface {
 type UserUsecaseImpl struct {
 	UserRepo         repository.UserRepository
 	RefreshTokenRepo repository.RefreshTokenRepository
+	ClassRepo        repository.ClassRepository
 	DB               *gorm.DB
 	Validate         *validator.Validate
 }
 
-func NewUserUsecase(userRepo repository.UserRepository, RefreshTokenRepo repository.RefreshTokenRepository, DB *gorm.DB, validate *validator.Validate) UserUsecase {
+func NewUserUsecase(userRepo repository.UserRepository, RefreshTokenRepo repository.RefreshTokenRepository, classRepo repository.ClassRepository, DB *gorm.DB, validate *validator.Validate) UserUsecase {
 	return &UserUsecaseImpl{
 		UserRepo:         userRepo,
 		RefreshTokenRepo: RefreshTokenRepo,
+		ClassRepo:        classRepo,
 		DB:               DB,
 		Validate:         validate,
 	}
@@ -165,6 +168,35 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 		return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
 	}
 
+	if request.Role == "mahasiswa" {
+		if request.ClassId == 0 {
+			errorResponse.Message = "invalid request parameter"
+			errorResponse.Details = []string{"Field ClassId failed on required rule"}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			return nil, fiber.NewError(fiber.ErrBadGateway.Code, string(jsonString))
+		}
+
+		class := &entity.Class{
+			ID: request.ClassId,
+		}
+
+		err := userUsecase.ClassRepo.FindById(tx, class)
+		if err != nil {
+			errorResponse.Message = "Class data was not found"
+			errorResponse.Details = []string{}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by id class in create user repo : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		user.UserClass.ClassId = request.ClassId
+	}
+
 	err = userUsecase.UserRepo.Create(tx, user)
 	if err != nil {
 		log.Println("failed when create repo user : ", err)
@@ -249,8 +281,14 @@ func (userUsecase *UserUsecaseImpl) FindByEmail(ctx context.Context, emailReques
 	user.Email = emailRequest
 
 	if err := userUsecase.UserRepo.FindByEmail(tx, user); err != nil {
-		log.Println("Data not found : ")
-		return nil, fiber.ErrNotFound
+		errorResponse := &model.ErrorResponse{
+			Message: "Duplicate entry",
+			Details: []string{"email already exists in the database."},
+		}
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -359,10 +397,24 @@ func (userUsecase *UserUsecaseImpl) Update(ctx context.Context, request *model.U
 	tx := userUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
+	errorResponse := &model.ErrorResponse{}
+
 	err := userUsecase.Validate.Struct(request)
 	if err != nil {
-		log.Println("Invalid request Body : ", err)
-		return nil, fiber.ErrBadGateway
+		var validationErrors []string
+		for _, e := range err.(validator.ValidationErrors) {
+			msg := fmt.Sprintf("Field '%s' failed on '%s' rule", e.Field(), e.Tag())
+			validationErrors = append(validationErrors, msg)
+		}
+
+		errorResponse.Message = "invalid request parameter"
+		errorResponse.Details = validationErrors
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error update user : ", err)
+
+		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
 	}
 
 	user := &entity.User{
@@ -371,8 +423,13 @@ func (userUsecase *UserUsecaseImpl) Update(ctx context.Context, request *model.U
 
 	err = userUsecase.UserRepo.FindByEmail(tx, user)
 	if err != nil {
+		errorResponse.Message = "User data was not found"
+		errorResponse.Details = []string{}
+
+		jsonString, _ := json.Marshal(errorResponse)
 		log.Println("Data not found")
-		return nil, fiber.ErrNotFound
+
+		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 	}
 
 	if request.Password != "" {
@@ -391,10 +448,21 @@ func (userUsecase *UserUsecaseImpl) Update(ctx context.Context, request *model.U
 	err = userUsecase.UserRepo.Update(tx, user)
 	if err != nil {
 		mysqlErr := err.(*mysql.MySQLError)
-		log.Println("failed when update repo user : ", err.Error())
+		log.Println("failed when update repo user : ", err)
+
+		var errorField string
+		parts := strings.Split(mysqlErr.Message, "'")
+		if len(parts) > 2 {
+			errorField = parts[1]
+		}
 
 		if mysqlErr.Number == 1062 {
-			return nil, fiber.ErrConflict
+			errorResponse.Message = "Duplicate entry"
+			errorResponse.Details = []string{errorField + " already exists in the database."}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
 		}
 
 		return nil, fiber.ErrInternalServerError
