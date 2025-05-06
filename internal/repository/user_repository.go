@@ -13,6 +13,7 @@ type UserRepository interface {
 	FindByEmail(tx *gorm.DB, user *entity.User) error
 	FindAll(tx *gorm.DB, userId uint, users *[]entity.User) error
 	Search(tx *gorm.DB, users *[]entity.User, username string) error
+	FindById(tx *gorm.DB, user *entity.User) error
 }
 
 type UserRepositoryImpl struct {
@@ -26,6 +27,11 @@ func NewUserRepository() UserRepository {
 // FindAll implements UserRepository.
 func (repository *UserRepositoryImpl) FindAll(tx *gorm.DB, userId uint, users *[]entity.User) error {
 	return tx.Not("id = ?", userId).Find(users).Error
+}
+
+// FindById implements UserRepository.
+func (repository *UserRepositoryImpl) FindById(tx *gorm.DB, user *entity.User) error {
+	return tx.First(user).Error
 }
 
 // Login implements UserRepository.

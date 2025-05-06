@@ -10,6 +10,7 @@ type RouteConfig struct {
 	App              *fiber.App
 	UserController   http.UserController
 	CourseController http.CourseController
+	ClassController  http.ClassController
 }
 
 func (config *RouteConfig) Setup() {
@@ -26,6 +27,13 @@ func (config *RouteConfig) Setup() {
 	config.App.Post("/api/courses", util.CheckLevel("admin"), config.CourseController.Create)
 	config.App.Delete("/api/courses/:course_code", util.CheckLevel("admin"), config.CourseController.Delete)
 	config.App.Put("/api/courses", util.CheckLevel("admin"), config.CourseController.Update)
+
+	// API for class
+	config.App.Get("/api/classes", util.CheckLevel("admin"), config.ClassController.FindAll)
+	config.App.Get("/api/classes/:class_name", util.CheckLevel("admin"), config.ClassController.FindByName)
+	config.App.Post("/api/classes", util.CheckLevel("admin"), config.ClassController.Create)
+	config.App.Delete("/api/classes/:class_id", util.CheckLevel("admin"), config.ClassController.Delete)
+	config.App.Put("/api/classes", util.CheckLevel("admin"), config.ClassController.Update)
 
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)

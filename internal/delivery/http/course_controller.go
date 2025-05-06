@@ -32,7 +32,7 @@ func (controller *CourseControllerImpl) FindByCourseCode(ctx *fiber.Ctx) error {
 
 	response, err := controller.CourseUsecase.FindByCourseCode(ctx.UserContext(), courseCode)
 	if err != nil {
-		log.Println("failed to find by course code : ", err)
+		log.Println("failed to find by course code")
 		return err
 	}
 
@@ -45,7 +45,7 @@ func (controller *CourseControllerImpl) FindAll(ctx *fiber.Ctx) error {
 
 	responses, err := controller.CourseUsecase.FindAll(ctx.UserContext())
 	if err != nil {
-		log.Println("failed to find all course : ", err)
+		log.Println("failed to find all course")
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (controller *CourseControllerImpl) Create(ctx *fiber.Ctx) error {
 
 	response, err := controller.CourseUsecase.Create(ctx.UserContext(), request)
 	if err != nil {
-		log.Println("failed to create course : ", err)
+		log.Println("failed to create course")
 		return err
 	}
 
@@ -73,7 +73,7 @@ func (controller *CourseControllerImpl) Create(ctx *fiber.Ctx) error {
 // Delete implements CourseController.
 func (controller *CourseControllerImpl) Delete(ctx *fiber.Ctx) error {
 	if err := controller.CourseUsecase.Delete(ctx.UserContext(), ctx.Params("course_code")); err != nil {
-		log.Println("failed to delete course : ", err)
+		log.Println("failed to delete course")
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (controller *CourseControllerImpl) Update(ctx *fiber.Ctx) error {
 
 	response, err := controller.CourseUsecase.Update(ctx.UserContext(), request)
 	if err != nil {
-		log.Println("failed to update course : ", err)
+		log.Println("failed to update course")
 		return err
 	}
 

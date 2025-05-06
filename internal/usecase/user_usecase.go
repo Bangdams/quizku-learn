@@ -2,7 +2,9 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -63,7 +65,7 @@ func (userUsecase *UserUsecaseImpl) Logout(ctx context.Context, refreshToken str
 	if err := userUsecase.RefreshTokenRepo.FindById(tx, uint(userId)); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Println("Logout failed because the user has not logged in.")
-			return fiber.ErrBadRequest
+			return fiber.NewError(fiber.StatusBadRequest, "User has not logged in")
 		} else {
 			log.Println("Error RefreshToken findbyid:", err)
 			return fiber.ErrInternalServerError
@@ -120,10 +122,24 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 	tx := userUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
+	errorResponse := &model.ErrorResponse{}
+
 	err := userUsecase.Validate.Struct(request)
 	if err != nil {
-		log.Println("Invalid request Body : ", err)
-		return nil, fiber.ErrBadRequest
+		var validationErrors []string
+		for _, e := range err.(validator.ValidationErrors) {
+			msg := fmt.Sprintf("Field '%s' failed on '%s' rule", e.Field(), e.Tag())
+			validationErrors = append(validationErrors, msg)
+		}
+
+		errorResponse.Message = "invalid request parameter"
+		errorResponse.Details = validationErrors
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error create user : ", err)
+
+		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
 	}
 
 	password, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
@@ -141,8 +157,12 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 	}
 
 	if err := userUsecase.UserRepo.FindByEmail(tx, user); err == nil {
-		log.Println("duplicate email : ", user.Email)
-		return nil, fiber.ErrConflict
+		errorResponse.Message = "Duplicate entry"
+		errorResponse.Details = []string{"email already exists in the database."}
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
 	}
 
 	err = userUsecase.UserRepo.Create(tx, user)
@@ -169,7 +189,20 @@ func (userUsecase *UserUsecaseImpl) Delete(ctx context.Context, userId uint) err
 	user := &entity.User{}
 	user.ID = userId
 
-	err := userUsecase.UserRepo.Delete(tx, user)
+	err := userUsecase.UserRepo.FindById(tx, user)
+	if err != nil {
+		errorResponse := model.ErrorResponse{
+			Message: "User data was not found",
+			Details: []string{},
+		}
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error delete user : ", err)
+
+		return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+	}
+
+	err = userUsecase.UserRepo.Delete(tx, user)
 	if err != nil {
 		log.Println("failed when delete repo user : ", err)
 		return fiber.ErrInternalServerError

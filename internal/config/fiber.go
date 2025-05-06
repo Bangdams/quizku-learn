@@ -1,7 +1,10 @@
 package config
 
 import (
+	"encoding/json"
+
 	middelware "github.com/Bangdams/quizku-learn/internal/delivery/http/middleware"
+	"github.com/Bangdams/quizku-learn/internal/model"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -23,8 +26,13 @@ func NewErrorHandler() fiber.ErrorHandler {
 			code = e.Code
 		}
 
-		return ctx.Status(code).JSON(fiber.Map{
-			"errors": err.Error(),
-		})
+		var errorResponse model.ErrorResponse
+		jsonError := json.Unmarshal([]byte(err.Error()), &errorResponse)
+		if jsonError != nil {
+			errorResponse.Message = err.Error()
+			return ctx.Status(code).JSON(model.WebResponse[any]{Errors: &errorResponse})
+		}
+
+		return ctx.Status(code).JSON(model.WebResponse[any]{Errors: &errorResponse})
 	}
 }

@@ -42,7 +42,7 @@ func (controller *UserControllerImpl) Refresh(ctx *fiber.Ctx) error {
 
 	response, err := controller.UserUsecase.Refresh(ctx.UserContext(), cookie)
 	if err != nil {
-		log.Println("failed to create refresh token : ", err)
+		log.Println("failed to create refresh token")
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (controller *UserControllerImpl) Create(ctx *fiber.Ctx) error {
 
 	response, err := controller.UserUsecase.Create(ctx.UserContext(), request)
 	if err != nil {
-		log.Println("failed to create user : ", err)
+		log.Println("failed to create user")
 		return err
 	}
 
@@ -69,10 +69,13 @@ func (controller *UserControllerImpl) Create(ctx *fiber.Ctx) error {
 
 // Delete implements UserController.
 func (controller UserControllerImpl) Delete(ctx *fiber.Ctx) error {
-	id, _ := ctx.ParamsInt("id")
+	id, err := ctx.ParamsInt("id")
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
 
 	if err := controller.UserUsecase.Delete(ctx.UserContext(), uint(id)); err != nil {
-		log.Println("failed to delete user : ", err)
+		log.Println("failed to delete user")
 		return err
 	}
 
@@ -93,13 +96,13 @@ func (controller *UserControllerImpl) FindAll(ctx *fiber.Ctx) error {
 	if keyword != "" {
 		responses, err = controller.UserUsecase.Search(ctx.UserContext(), keyword)
 		if err != nil {
-			log.Println("failed to search user : ", err)
+			log.Println("failed to search user")
 			return err
 		}
 	} else {
 		responses, err = controller.UserUsecase.FindAll(ctx.UserContext(), uint(userID))
 		if err != nil {
-			log.Println("failed to find all user : ", err)
+			log.Println("failed to find all user")
 			return err
 		}
 	}
@@ -113,7 +116,7 @@ func (controller *UserControllerImpl) FindByEmail(ctx *fiber.Ctx) error {
 
 	response, err := controller.UserUsecase.FindByEmail(ctx.UserContext(), email)
 	if err != nil {
-		log.Println("failed to find by email user : ", err)
+		log.Println("failed to find by email user")
 		return err
 	}
 
@@ -133,7 +136,7 @@ func (controller *UserControllerImpl) Login(ctx *fiber.Ctx) error {
 
 	response, refreshToken, err := controller.UserUsecase.Login(ctx.UserContext(), request, cookie)
 	if err != nil {
-		log.Println("failed to login : ", err)
+		log.Println("failed to login")
 		return err
 	}
 
@@ -186,7 +189,7 @@ func (controller *UserControllerImpl) Update(ctx *fiber.Ctx) error {
 
 	response, err := controller.UserUsecase.Update(ctx.UserContext(), request)
 	if err != nil {
-		log.Println("failed to update user : ", err)
+		log.Println("failed to update user")
 		return err
 	}
 

@@ -2,7 +2,10 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/Bangdams/quizku-learn/internal/entity"
 	"github.com/Bangdams/quizku-learn/internal/model"
@@ -45,8 +48,15 @@ func (courseUsecase *CourseUsecaseImpl) FindByCourseCode(ctx context.Context, co
 	course.CourseCode = courseCode
 
 	if err := courseUsecase.CourseRepo.FindByCourseCode(tx, course); err != nil {
+		errorResponse := model.ErrorResponse{
+			Message: "Course data was not found",
+			Details: []string{},
+		}
+		jsonString, _ := json.Marshal(errorResponse)
+
 		log.Println("Data not found : ")
-		return nil, fiber.ErrNotFound
+
+		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -57,7 +67,6 @@ func (courseUsecase *CourseUsecaseImpl) FindByCourseCode(ctx context.Context, co
 	log.Println("success find by course code from usecase course")
 
 	return converter.CourseToResponse(course), nil
-
 }
 
 // FindAll implements CourseUsecase.
@@ -87,10 +96,24 @@ func (courseUsecase *CourseUsecaseImpl) Create(ctx context.Context, request *mod
 	tx := courseUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
+	errorResponse := &model.ErrorResponse{}
+
 	err := courseUsecase.Validate.Struct(request)
 	if err != nil {
-		log.Println("Invalid request Body : ", err)
-		return nil, fiber.ErrBadRequest
+		var validationErrors []string
+		for _, e := range err.(validator.ValidationErrors) {
+			msg := fmt.Sprintf("Field '%s' failed on '%s' rule", e.Field(), e.Tag())
+			validationErrors = append(validationErrors, msg)
+		}
+
+		errorResponse.Message = "invalid request parameter"
+		errorResponse.Details = validationErrors
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error create course : ", err)
+
+		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
 	}
 
 	course := &entity.Course{
@@ -100,7 +123,24 @@ func (courseUsecase *CourseUsecaseImpl) Create(ctx context.Context, request *mod
 
 	err = courseUsecase.CourseRepo.Create(tx, course)
 	if err != nil {
+		mysqlErr := err.(*mysql.MySQLError)
 		log.Println("failed when create repo course : ", err)
+
+		var errorField string
+		parts := strings.Split(mysqlErr.Message, "'")
+		if len(parts) > 2 {
+			errorField = parts[1]
+		}
+
+		if mysqlErr.Number == 1062 {
+			errorResponse.Message = "Duplicate entry"
+			errorResponse.Details = []string{errorField + " already exists in the database."}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
+		}
+
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -122,7 +162,20 @@ func (courseUsecase *CourseUsecaseImpl) Delete(ctx context.Context, courseCode s
 	course := &entity.Course{}
 	course.CourseCode = courseCode
 
-	err := courseUsecase.CourseRepo.Delete(tx, course)
+	_, err := courseUsecase.FindByCourseCode(ctx, courseCode)
+	if err != nil {
+		errorResponse := model.ErrorResponse{
+			Message: "Course data was not found",
+			Details: []string{},
+		}
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error delete course : ", err)
+
+		return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+	}
+
+	err = courseUsecase.CourseRepo.Delete(tx, course)
 	if err != nil {
 		log.Println("failed when delete repo course : ", err)
 		return fiber.ErrInternalServerError
@@ -143,10 +196,24 @@ func (courseUsecase *CourseUsecaseImpl) Update(ctx context.Context, request *mod
 	tx := courseUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
+	errorResponse := &model.ErrorResponse{}
+
 	err := courseUsecase.Validate.Struct(request)
 	if err != nil {
+		var validationErrors []string
+		for _, e := range err.(validator.ValidationErrors) {
+			msg := fmt.Sprintf("Field '%s' failed on '%s' rule", e.Field(), e.Tag())
+			validationErrors = append(validationErrors, msg)
+		}
+
+		errorResponse.Message = "invalid request parameter"
+		errorResponse.Details = validationErrors
+
+		jsonString, _ := json.Marshal(errorResponse)
+
 		log.Println("Invalid request Body : ", err)
-		return nil, fiber.ErrBadGateway
+
+		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
 	}
 
 	course := &entity.Course{
@@ -155,8 +222,13 @@ func (courseUsecase *CourseUsecaseImpl) Update(ctx context.Context, request *mod
 
 	err = courseUsecase.CourseRepo.FindByCourseCode(tx, course)
 	if err != nil {
+		errorResponse.Message = "Course data was not found"
+		errorResponse.Details = []string{}
+
+		jsonString, _ := json.Marshal(errorResponse)
 		log.Println("Data not found")
-		return nil, fiber.ErrNotFound
+
+		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 	}
 
 	if course.CourseCode != request.NewCourseCode {
