@@ -11,6 +11,7 @@ type CourseRepository interface {
 	Delete(tx *gorm.DB, course *entity.Course) error
 	FindByCourseCode(tx *gorm.DB, course *entity.Course) error
 	FindAll(tx *gorm.DB, courses *[]entity.Course) error
+	FindAllByCourseCode(tx *gorm.DB, courseCode []string, courses *[]entity.Course) error
 }
 
 type CourseRepositoryImpl struct {
@@ -19,6 +20,11 @@ type CourseRepositoryImpl struct {
 
 func NewCourseRepository() CourseRepository {
 	return &CourseRepositoryImpl{}
+}
+
+// FindAllByCourseCode implements CourseRepository.
+func (repository *CourseRepositoryImpl) FindAllByCourseCode(tx *gorm.DB, courseCode []string, courses *[]entity.Course) error {
+	return tx.Model(&entity.Course{}).Where("course_code IN ?", courseCode).Find(courses).Error
 }
 
 // FindByCourseCode implements CourseRepository.

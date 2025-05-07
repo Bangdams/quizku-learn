@@ -23,20 +23,89 @@ type ClassUsecase interface {
 	Delete(ctx context.Context, classId uint) error
 	FindAll(ctx context.Context) (*[]model.ClassResponse, error)
 	FindByName(ctx context.Context, className string) (*model.ClassResponse, error)
+	ClassSubject(ctx context.Context, request *model.ClassSubjectRequest) (*model.ClassSubjectResponse, error)
 }
 
 type ClassUsecaseImpl struct {
-	ClassRepo repository.ClassRepository
-	DB        *gorm.DB
-	Validate  *validator.Validate
+	ClassRepo  repository.ClassRepository
+	CourseRepo repository.CourseRepository
+	DB         *gorm.DB
+	Validate   *validator.Validate
 }
 
-func NewClassUsecase(classRepo repository.ClassRepository, DB *gorm.DB, validate *validator.Validate) ClassUsecase {
+func NewClassUsecase(classRepo repository.ClassRepository, CourseRepo repository.CourseRepository, DB *gorm.DB, validate *validator.Validate) ClassUsecase {
 	return &ClassUsecaseImpl{
-		ClassRepo: classRepo,
-		DB:        DB,
-		Validate:  validate,
+		ClassRepo:  classRepo,
+		CourseRepo: CourseRepo,
+		DB:         DB,
+		Validate:   validate,
 	}
+}
+
+// ClassSubject implements ClassUsecase.
+func (classUsecase *ClassUsecaseImpl) ClassSubject(ctx context.Context, request *model.ClassSubjectRequest) (*model.ClassSubjectResponse, error) {
+	tx := classUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	errorResponse := &model.ErrorResponse{}
+
+	err := classUsecase.Validate.Struct(request)
+	if err != nil {
+		var validationErrors []string
+		for _, e := range err.(validator.ValidationErrors) {
+			msg := fmt.Sprintf("Field '%s' failed on '%s' rule", e.Field(), e.Tag())
+			validationErrors = append(validationErrors, msg)
+		}
+
+		errorResponse.Message = "invalid request parameter"
+		errorResponse.Details = validationErrors
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error create class subject : ", err)
+
+		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
+	}
+
+	class := &entity.Class{ID: uint(request.ClassId)}
+
+	err = classUsecase.ClassRepo.FindById(tx, class)
+	if err != nil {
+		errorResponse.Message = "Class data was not found"
+		errorResponse.Details = []string{}
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error find by id class : ", err)
+
+		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+	}
+
+	courses := &[]entity.Course{}
+
+	err = classUsecase.CourseRepo.FindAllByCourseCode(tx, request.CourseCodes, courses)
+	if err != nil {
+		errorResponse.Message = "Course data was not found"
+		errorResponse.Details = []string{}
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error find by course code : ", err)
+
+		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+	}
+
+	class.Courses = *courses
+
+	classUsecase.ClassRepo.CreateClassSubject(tx, class)
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success create data for class subject from usecase class")
+	return converter.ClassSubjectToResponse(class, courses), nil
 }
 
 // Create implements ClassUsecase.

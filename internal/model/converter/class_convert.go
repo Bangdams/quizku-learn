@@ -16,6 +16,20 @@ func ClassToResponse(class *entity.Class) *model.ClassResponse {
 	}
 }
 
+func ClassSubjectToResponse(class *entity.Class, courses *[]entity.Course) *model.ClassSubjectResponse {
+	log.Println("log from class to response")
+
+	var courseCodes []string
+	for _, v := range *courses {
+		courseCodes = append(courseCodes, v.CourseCode)
+	}
+
+	return &model.ClassSubjectResponse{
+		ClassId:     int(class.ID),
+		CourseCodes: courseCodes,
+	}
+}
+
 func ClassToResponses(classs *[]entity.Class) *[]model.ClassResponse {
 	var classResponses []model.ClassResponse
 

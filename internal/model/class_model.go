@@ -12,3 +12,13 @@ type ClassRequest struct {
 type ClassUpdate struct {
 	ClassResponse
 }
+
+type ClassSubjectResponse struct {
+	ClassId     int      `json:"class_id" validate:"required"`
+	CourseCodes []string `json:"course_code" validate:"required"`
+}
+
+type ClassSubjectRequest struct {
+	ClassId     int      `json:"class_id" validate:"required"`
+	CourseCodes []string `json:"course_code" validate:"required"`
+}

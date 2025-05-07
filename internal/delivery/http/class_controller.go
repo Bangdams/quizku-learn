@@ -14,6 +14,7 @@ type ClassController interface {
 	Delete(ctx *fiber.Ctx) error
 	FindAll(ctx *fiber.Ctx) error
 	FindByName(ctx *fiber.Ctx) error
+	ClassSubject(ctx *fiber.Ctx) error
 }
 
 type ClassControllerImpl struct {
@@ -24,6 +25,24 @@ func NewClassController(classUsecase usecase.ClassUsecase) ClassController {
 	return &ClassControllerImpl{
 		ClassUsecase: classUsecase,
 	}
+}
+
+// ClassSubject implements ClassController.
+func (controller *ClassControllerImpl) ClassSubject(ctx *fiber.Ctx) error {
+	request := new(model.ClassSubjectRequest)
+
+	if err := ctx.BodyParser(request); err != nil {
+		log.Println("failed to parse request : ", err)
+		return fiber.ErrBadRequest
+	}
+
+	response, err := controller.ClassUsecase.ClassSubject(ctx.UserContext(), request)
+	if err != nil {
+		log.Println("failed to create class subject")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.ClassSubjectResponse]{Data: response})
 }
 
 // Create implements ClassController.

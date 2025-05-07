@@ -35,6 +35,9 @@ func (config *RouteConfig) Setup() {
 	config.App.Delete("/api/classes/:class_id", util.CheckLevel("admin"), config.ClassController.Delete)
 	config.App.Put("/api/classes", util.CheckLevel("admin"), config.ClassController.Update)
 
+	// API for class subject
+	config.App.Post("/api/class-subject", util.CheckLevel("admin"), config.ClassController.ClassSubject)
+
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)
 	config.App.Post("/logout", config.UserController.Logout)

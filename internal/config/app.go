@@ -26,7 +26,7 @@ func Bootstrap(config *BootstrapConfig) {
 	// usecase
 	userUsecase := usecase.NewUserUsecase(userRepo, refreshTokenRepo, classRepo, config.DB, config.Validate)
 	courseUsecase := usecase.NewCourseUsecase(courseRepo, config.DB, config.Validate)
-	classUsecase := usecase.NewClassUsecase(classRepo, config.DB, config.Validate)
+	classUsecase := usecase.NewClassUsecase(classRepo, courseRepo, config.DB, config.Validate)
 
 	// controller
 	userController := http.NewUserController(userUsecase)

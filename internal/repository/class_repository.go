@@ -12,6 +12,7 @@ type ClassRepository interface {
 	FindAll(tx *gorm.DB, classes *[]entity.Class) error
 	FindByName(tx *gorm.DB, class *entity.Class) error
 	FindById(tx *gorm.DB, class *entity.Class) error
+	CreateClassSubject(tx *gorm.DB, class *entity.Class) error
 }
 
 type ClassRepositoryImpl struct {
@@ -20,6 +21,13 @@ type ClassRepositoryImpl struct {
 
 func NewClassRepository() ClassRepository {
 	return &ClassRepositoryImpl{}
+}
+
+// db.Model(&user).Association("Roles").Append(roles)
+
+// CreateClassSubject implements ClassRepository.
+func (repository *ClassRepositoryImpl) CreateClassSubject(tx *gorm.DB, class *entity.Class) error {
+	return tx.Model(class).Association("Courses").Append(class.Courses)
 }
 
 // FindByClassCode implements ClassRepository.
