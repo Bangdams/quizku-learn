@@ -93,6 +93,7 @@ func (controller *UserControllerImpl) FindAll(ctx *fiber.Ctx) error {
 
 	// serach title
 	keyword := ctx.Query("keyword")
+	roleParam := ctx.Query("role")
 	if keyword != "" {
 		responses, err = controller.UserUsecase.Search(ctx.UserContext(), keyword)
 		if err != nil {
@@ -100,10 +101,18 @@ func (controller *UserControllerImpl) FindAll(ctx *fiber.Ctx) error {
 			return err
 		}
 	} else {
-		responses, err = controller.UserUsecase.FindAll(ctx.UserContext(), uint(userID))
-		if err != nil {
-			log.Println("failed to find all user")
-			return err
+		if roleParam != "" {
+			responses, err = controller.UserUsecase.FindByRole(ctx.UserContext(), roleParam, uint(userID))
+			if err != nil {
+				log.Println("failed to find all user")
+				return err
+			}
+		} else {
+			responses, err = controller.UserUsecase.FindAll(ctx.UserContext(), uint(userID))
+			if err != nil {
+				log.Println("failed to find all user")
+				return err
+			}
 		}
 	}
 

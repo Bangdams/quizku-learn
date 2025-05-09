@@ -28,6 +28,7 @@ type UserUsecase interface {
 	Update(ctx context.Context, request *model.UpdateUserRequest) (*model.UserResponse, error)
 	Delete(ctx context.Context, userId uint) error
 	FindAll(ctx context.Context, userId uint) (*[]model.UserResponse, error)
+	FindByRole(ctx context.Context, role string, userId uint) (*[]model.UserResponse, error)
 	FindByEmail(ctx context.Context, emailRequest string) (*model.UserResponse, error)
 	Search(ctx context.Context, keyword string) (*[]model.UserResponse, error)
 	Login(ctx context.Context, request *model.LoginRequest, requestRefreshToken string) (*model.LoginResponse, string, error)
@@ -51,6 +52,27 @@ func NewUserUsecase(userRepo repository.UserRepository, RefreshTokenRepo reposit
 		DB:               DB,
 		Validate:         validate,
 	}
+}
+
+// FindByRole implements UserUsecase.
+func (userUsecase *UserUsecaseImpl) FindByRole(ctx context.Context, role string, userId uint) (*[]model.UserResponse, error) {
+	tx := userUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	var users = &[]entity.User{}
+	err := userUsecase.UserRepo.FindByRole(tx, role, userId, users)
+	if err != nil {
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success find by role from usecase user")
+
+	return converter.UserToResponses(users), nil
 }
 
 // Logout implements UserUsecase.
@@ -281,14 +303,21 @@ func (userUsecase *UserUsecaseImpl) FindByEmail(ctx context.Context, emailReques
 	user.Email = emailRequest
 
 	if err := userUsecase.UserRepo.FindByEmail(tx, user); err != nil {
-		errorResponse := &model.ErrorResponse{
-			Message: "Duplicate entry",
-			Details: []string{"email already exists in the database."},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "User data was not found",
+				Details: []string{},
+			}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by email user usecase : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		} else {
+			log.Println("Error find by email user usecase:", err)
+			return nil, fiber.ErrInternalServerError
 		}
-
-		jsonString, _ := json.Marshal(errorResponse)
-
-		return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
 	}
 
 	if err := tx.Commit().Error; err != nil {

@@ -1,13 +1,16 @@
 package model
 
-import "github.com/golang-jwt/jwt/v5"
+import (
+	"github.com/golang-jwt/jwt/v5"
+)
 
 type UserResponse struct {
-	ID    uint   `json:"id" validate:"required"`
-	Name  string `json:"name" validate:"required"`
-	Email string `json:"email" validate:"required"`
-	Role  string `json:"role" validate:"required"`
-	Image string `json:"image" validate:"required"`
+	ID        uint   `json:"id" validate:"required"`
+	Name      string `json:"name" validate:"required"`
+	Email     string `json:"email" validate:"required"`
+	Role      string `json:"role" validate:"required"`
+	Image     string `json:"image" validate:"required"`
+	CreatedAt string `json:"created_at" validate:"required"`
 }
 
 type UserRequest struct {

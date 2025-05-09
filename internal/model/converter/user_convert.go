@@ -11,11 +11,12 @@ func UserToResponse(user *entity.User) *model.UserResponse {
 	log.Println("log from user to response")
 
 	return &model.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Role:  user.Role,
-		Image: user.Image,
+		ID:        user.ID,
+		Name:      user.Name,
+		Email:     user.Email,
+		Role:      user.Role,
+		Image:     user.Image,
+		CreatedAt: user.CreatedAt.Format("2006-01-02"),
 	}
 }
 

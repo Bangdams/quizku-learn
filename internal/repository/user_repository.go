@@ -12,7 +12,8 @@ type UserRepository interface {
 	Login(tx *gorm.DB, user *entity.User, keyword string) error
 	FindByEmail(tx *gorm.DB, user *entity.User) error
 	FindAll(tx *gorm.DB, userId uint, users *[]entity.User) error
-	Search(tx *gorm.DB, users *[]entity.User, username string) error
+	FindByRole(tx *gorm.DB, role string, userId uint, users *[]entity.User) error
+	Search(tx *gorm.DB, users *[]entity.User, name string) error
 	FindById(tx *gorm.DB, user *entity.User) error
 }
 
@@ -22,6 +23,11 @@ type UserRepositoryImpl struct {
 
 func NewUserRepository() UserRepository {
 	return &UserRepositoryImpl{}
+}
+
+// FindByRole implements UserRepository.
+func (repository *UserRepositoryImpl) FindByRole(tx *gorm.DB, role string, userId uint, users *[]entity.User) error {
+	return tx.Where("role = ?", role).Not("id = ?", userId).Find(users).Error
 }
 
 // FindAll implements UserRepository.
@@ -45,6 +51,6 @@ func (repository *UserRepositoryImpl) FindByEmail(tx *gorm.DB, user *entity.User
 }
 
 // Search implements UserRepository.
-func (*UserRepositoryImpl) Search(tx *gorm.DB, users *[]entity.User, username string) error {
-	return tx.Where("username LIKE ?", "%"+username+"%").Find(&users).Error
+func (*UserRepositoryImpl) Search(tx *gorm.DB, users *[]entity.User, name string) error {
+	return tx.Where("name LIKE ?", "%"+name+"%").Find(&users).Error
 }
