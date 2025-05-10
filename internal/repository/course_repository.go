@@ -12,6 +12,7 @@ type CourseRepository interface {
 	FindByCourseCode(tx *gorm.DB, course *entity.Course) error
 	FindAll(tx *gorm.DB, courses *[]entity.Course) error
 	FindAllByCourseCode(tx *gorm.DB, courseCode []string, courses *[]entity.Course) error
+	FindByIdWithClass(tx *gorm.DB, courses *[]entity.Course, classId []uint) error
 }
 
 type CourseRepositoryImpl struct {
@@ -20,6 +21,11 @@ type CourseRepositoryImpl struct {
 
 func NewCourseRepository() CourseRepository {
 	return &CourseRepositoryImpl{}
+}
+
+// FindByIdWithClass implements ClassRepository.
+func (repository *CourseRepositoryImpl) FindByIdWithClass(tx *gorm.DB, courses *[]entity.Course, classId []uint) error {
+	return tx.Preload("Classes", "id IN ?", classId).Find(courses).Error
 }
 
 // FindAllByCourseCode implements CourseRepository.

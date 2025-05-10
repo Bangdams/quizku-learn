@@ -7,10 +7,11 @@ import (
 )
 
 type RouteConfig struct {
-	App              *fiber.App
-	UserController   http.UserController
-	CourseController http.CourseController
-	ClassController  http.ClassController
+	App                        *fiber.App
+	UserController             http.UserController
+	CourseController           http.CourseController
+	ClassController            http.ClassController
+	LecturerTeachingController http.LecturerTeachingController
 }
 
 func (config *RouteConfig) Setup() {
@@ -20,6 +21,12 @@ func (config *RouteConfig) Setup() {
 	config.App.Post("/api/users", util.CheckLevel("admin"), config.UserController.Create)
 	config.App.Delete("/api/users/:id", util.CheckLevel("admin"), config.UserController.Delete)
 	config.App.Put("/api/users", util.CheckLevel("admin"), config.UserController.Update)
+
+	// show dashboard
+	config.App.Get("/api/admin-dashboard", util.CheckLevel("admin"), config.UserController.AdminDashboardReport)
+
+	// ubah jadi levelnya jadi dosen
+	config.App.Get("/api/lecturer-dashboard", util.CheckLevel("admin"), config.UserController.LecturerDashboardReport)
 
 	// API for course
 	config.App.Get("/api/courses", util.CheckLevel("admin"), config.CourseController.FindAll)
@@ -37,6 +44,14 @@ func (config *RouteConfig) Setup() {
 
 	// API for class subject
 	config.App.Post("/api/class-subject", util.CheckLevel("admin"), config.ClassController.ClassSubject)
+
+	// API for Lecturer Teaching
+	config.App.Get("/api/lecturer-teachings/:lecturer_teaching_id", util.CheckLevel("admin"), config.LecturerTeachingController.FindById)
+	config.App.Post("/api/lecturer-teachings", util.CheckLevel("admin"), config.LecturerTeachingController.Create)
+	config.App.Delete("/api/lecturer-teachings/:lecturer_teaching_id", util.CheckLevel("admin"), config.LecturerTeachingController.Delete)
+
+	// display Lecturer Teaching for insert
+	config.App.Get("/api/lecturer-teachings", util.CheckLevel("admin"), config.LecturerTeachingController.DisplayData)
 
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)

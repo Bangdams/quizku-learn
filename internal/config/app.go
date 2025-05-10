@@ -22,22 +22,26 @@ func Bootstrap(config *BootstrapConfig) {
 	refreshTokenRepo := repository.NewRefreshTokenRepository()
 	courseRepo := repository.NewCourseRepository()
 	classRepo := repository.NewClassRepository()
+	lecturerTeachingRepo := repository.NewLecturerTeachingRepository()
 
 	// usecase
 	userUsecase := usecase.NewUserUsecase(userRepo, refreshTokenRepo, classRepo, config.DB, config.Validate)
 	courseUsecase := usecase.NewCourseUsecase(courseRepo, config.DB, config.Validate)
 	classUsecase := usecase.NewClassUsecase(classRepo, courseRepo, config.DB, config.Validate)
+	lecturerTeachingUsecase := usecase.NewLecturerTeachingUsecase(lecturerTeachingRepo, classRepo, courseRepo, userRepo, config.DB, config.Validate)
 
 	// controller
 	userController := http.NewUserController(userUsecase)
 	courseController := http.NewCourseController(courseUsecase)
 	classController := http.NewClassController(classUsecase)
+	lecturerTeachingController := http.NewLecturerTeachingController(lecturerTeachingUsecase)
 
 	routeConfig := route.RouteConfig{
-		App:              config.App,
-		UserController:   userController,
-		CourseController: courseController,
-		ClassController:  classController,
+		App:                        config.App,
+		UserController:             userController,
+		CourseController:           courseController,
+		ClassController:            classController,
+		LecturerTeachingController: lecturerTeachingController,
 	}
 
 	routeConfig.Setup()

@@ -23,8 +23,6 @@ func NewClassRepository() ClassRepository {
 	return &ClassRepositoryImpl{}
 }
 
-// db.Model(&user).Association("Roles").Append(roles)
-
 // CreateClassSubject implements ClassRepository.
 func (repository *ClassRepositoryImpl) CreateClassSubject(tx *gorm.DB, class *entity.Class) error {
 	return tx.Model(class).Association("Courses").Append(class.Courses)

@@ -6,9 +6,10 @@ import (
 )
 
 type LecturerTeachingRepository interface {
-	Create(tx *gorm.DB, user *entity.LecturerTeaching) error
-	Update(tx *gorm.DB, user *entity.LecturerTeaching) error
-	Delete(tx *gorm.DB, user *entity.LecturerTeaching) error
+	CreateBacth(tx *gorm.DB, lecturerTeachings *[]entity.LecturerTeaching) error
+	Delete(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
+	OneDataCheck(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
+	FindById(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
 }
 
 type LecturerTeachingRepositoryImpl struct {
@@ -17,4 +18,14 @@ type LecturerTeachingRepositoryImpl struct {
 
 func NewLecturerTeachingRepository() LecturerTeachingRepository {
 	return &LecturerTeachingRepositoryImpl{}
+}
+
+// CheckJoinData implements LecturerTeachingRepository.
+func (repository *LecturerTeachingRepositoryImpl) FindById(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error {
+	return tx.First(lecturerTeaching).Error
+}
+
+// OneDataCheck implements LecturerTeachingRepository.
+func (repository *LecturerTeachingRepositoryImpl) OneDataCheck(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error {
+	return tx.First(lecturerTeaching, "course_code = ? AND user_id = ? AND class_id = ?", lecturerTeaching.CourseCode, lecturerTeaching.UserId, lecturerTeaching.ClassId).Error
 }

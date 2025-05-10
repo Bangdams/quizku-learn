@@ -1,11 +1,13 @@
 CREATE TABLE lecturer_teachings (
   id INT NOT NULL AUTO_INCREMENT,
-  code varchar(30) NOT NULL UNIQUE,
-  user_id INT NOT NULL UNIQUE,
-  class_id INT NOT NULL UNIQUE,
+  user_id INT NOT NULL,
+  class_id INT NOT NULL,
+  course_code VARCHAR(3) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (course_code) REFERENCES courses(course_code) ON DELETE CASCADE,
+  UNIQUE (user_id, course_code, class_id)
 ) ENGINE = InnoDB;

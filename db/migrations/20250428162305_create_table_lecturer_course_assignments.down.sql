@@ -1,7 +1,0 @@
-SET
-  FOREIGN_KEY_CHECKS = 0;
-
-DROP TABLE IF EXISTS lecturer_course_assignments;
-
-SET
-  FOREIGN_KEY_CHECKS = 1;
