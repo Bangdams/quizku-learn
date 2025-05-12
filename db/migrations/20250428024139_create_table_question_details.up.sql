@@ -2,7 +2,7 @@ CREATE TABLE question_details (
   id INT NOT NULL AUTO_INCREMENT,
   question_id INT NOT NULL,
   question_text TEXT NOT NULL,
-  answer_id INT NOT NULL,
+  correct_answer ENUM('a', 'b', 'c', 'd') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
