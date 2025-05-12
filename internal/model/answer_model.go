@@ -7,6 +7,6 @@ type AnswerResponse struct {
 }
 
 type AnswerRequest struct {
-	QuestionDetailId uint   `json:"question_detail_id" validate:"required"`
-	Answer           string `json:"answer" validate:"required"`
+	Choice string `json:"choice" validate:"required"`
+	Answer string `json:"answer_text" validate:"required"`
 }

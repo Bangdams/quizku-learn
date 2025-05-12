@@ -13,6 +13,20 @@ type UserResponse struct {
 	CreatedAt string `json:"created_at" validate:"required"`
 }
 
+type AdminDashboardReportResponse struct {
+	TotalUsers     int64 `json:"total_users" validate:"required"`
+	TotalQuizzes   int64 `json:"total_quizzes" validate:"required"`
+	TotalClasses   int64 `json:"total_classes" validate:"requied"`
+	TotalQuestions int64 `json:"total_questions" validate:"requied"`
+}
+
+type LecturerDashboardReportResponse struct {
+	TotalUsers   int64 `json:"total_users" validate:"required"`
+	TotalQuizzes int64 `json:"total_quizzes" validate:"required"`
+	TotalClasses int64 `json:"total_classes" validate:"requied"`
+	TotalCourses int64 `json:"total_courses" validate:"requied"`
+}
+
 type UserRequest struct {
 	Name     string `json:"name" validate:"required"`
 	Email    string `json:"email" validate:"required"`

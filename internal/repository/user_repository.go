@@ -2,6 +2,7 @@ package repository
 
 import (
 	"github.com/Bangdams/quizku-learn/internal/entity"
+	"github.com/Bangdams/quizku-learn/internal/model"
 	"gorm.io/gorm"
 )
 
@@ -15,6 +16,8 @@ type UserRepository interface {
 	FindByRole(tx *gorm.DB, role string, userId uint, users *[]entity.User) error
 	Search(tx *gorm.DB, users *[]entity.User, name string) error
 	FindById(tx *gorm.DB, user *entity.User) error
+	AdminDashboardReport(tx *gorm.DB, response *model.AdminDashboardReportResponse)
+	LecturerDashboardReport(tx *gorm.DB, userId uint, classIds []uint, response *model.LecturerDashboardReportResponse)
 }
 
 type UserRepositoryImpl struct {
@@ -23,6 +26,34 @@ type UserRepositoryImpl struct {
 
 func NewUserRepository() UserRepository {
 	return &UserRepositoryImpl{}
+}
+
+// AdminDashboardReport implements UserRepository.
+func (repository *UserRepositoryImpl) AdminDashboardReport(tx *gorm.DB, response *model.AdminDashboardReportResponse) {
+	tx.Model(&entity.User{}).Count(&response.TotalUsers)
+	tx.Model(&entity.Quiz{}).Count(&response.TotalQuizzes)
+	tx.Model(&entity.Class{}).Count(&response.TotalClasses)
+	tx.Model(&entity.Question{}).Count(&response.TotalQuestions)
+}
+
+// LecturerDashboardReport implements UserRepository.
+func (repository *UserRepositoryImpl) LecturerDashboardReport(tx *gorm.DB, userId uint, classIds []uint, response *model.LecturerDashboardReportResponse) {
+	tx.Model(&entity.User{}).
+		Joins("JOIN user_classes ON users.id = user_classes.user_id").
+		Where("user_classes.id IN ?", classIds).Count(&response.TotalUsers)
+
+	tx.Model(&entity.Quiz{}).
+		Count(&response.TotalQuizzes)
+
+	tx.Model(&entity.LecturerTeaching{}).
+		Where("user_id = ?", userId).
+		Group("class_id").
+		Count(&response.TotalClasses)
+
+	tx.Model(&entity.LecturerTeaching{}).
+		Where("user_id = ?", userId).
+		Select("COUNT(DISTINCT course_code)").
+		Count(&response.TotalCourses)
 }
 
 // FindByRole implements UserRepository.
