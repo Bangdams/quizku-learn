@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dosen</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #f1f5f9;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      .sidebar {
+        width: 250px;
+        background-color: #1e293b;
+        color: #fff;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        padding: 20px 10px;
+      }
+
+      .sidebar a {
+        color: #cbd5e1;
+        display: block;
+        padding: 10px;
+        border-radius: 8px;
+        text-decoration: none;
+        margin-bottom: 5px;
+      }
+
+      .sidebar a.active,
+      .sidebar a:hover {
+        background-color: #334155;
+        color: #fff;
+      }
+
+      .main-content {
+        margin-left: 260px;
+        padding: 40px;
+      }
+
+      .custom-btn {
+        background-color: #1e293b;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px;
+        font-weight: bold;
+      }
+
+      .custom-btn:hover {
+        background-color: #334155;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h2 class="mb-4">Quizku.</h2>
+      <a href="#">Dashboard</a>
+      <a href="../kelola_pengguna/kelola_pengguna.html">Kelola Pengguna</a>
+      <a href="#">Bank Soal</a>
+      <a href="#">Histori Quiz</a>
+      <a href="../Matakuliah/matakuliah.html">Matakuliah</a>
+      <a href="#" class="active">Dosen</a>
+      <a href="../Mahasiswa/mahasiswa.html">Mahasiswa</a>
+      <a href="../Kelas/kelas.html">Kelas</a>
+      <a href="#">Pengaturan</a>
+
+      <div class="profile_sidebar mt-5 pt-4 border-top">
+        <div class="d-flex align-items-center gap-2">
+          <img
+            src="https://i.pravatar.cc/40"
+            class="rounded-circle"
+            alt="User"
+            width="32"
+          />
+          <div>
+            <small>Dominick</small><br />
+            <small class="text-light">Dominick@gmail.com</small>
+          </div>
+        </div>
+        <a href="../login/login.html" class="btn btn-light btn-sm w-100 mt-3"
+          >Logout</a
+        >
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <h2 class="fw-bold mb-2">Dosen</h2>
+      <p class="mb-4">
+        Create and manage user accounts for students, lecturers, and
+        administrators.
+      </p>
+      <div class="card p-4 shadow-sm">
+        <div class="mb-3">
+          <label for="dosenSelect" class="form-label">Dosen</label>
+          <select id="dosenSelect" class="form-select"></select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Kelas</label>
+          <div id="listKelas"></div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Mata Kuliah</label>
+          <div id="listMatakuliah" class="form-check"></div>
+        </div>
+
+        <button class="custom-btn w-100">Simpan</button>
+      </div>
+    </div>
+
+    <!-- Script -->
+    <script>
+      function loadDosen() {
+        const pengguna = JSON.parse(localStorage.getItem("pengguna")) || [];
+        const dosenSelect = document.getElementById("dosenSelect");
+        dosenSelect.innerHTML = pengguna
+          .filter((user) => user.role === "dosen")
+          .map(
+            (dosen) => `<option value="${dosen.nama}">${dosen.nama}</option>`
+          )
+          .join("");
+      }
+
+      function loadKelas() {
+        const kelas = JSON.parse(localStorage.getItem("kelas")) || [];
+        const container = document.getElementById("listKelas");
+        container.innerHTML = kelas
+          .map(
+            (kls, i) => `
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="kelas" value="${kls}" id="kelas${i}">
+          <label class="form-check-label" for="kelas${i}">${kls}</label>
+        </div>
+      `
+          )
+          .join("");
+      }
+
+      function loadMatakuliah() {
+        const matakuliah = JSON.parse(localStorage.getItem("matakuliah")) || [];
+        const container = document.getElementById("listMatakuliah");
+        container.innerHTML = matakuliah
+          .map(
+            (mk, i) => `
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="matkul" value="${mk.nama}" id="mk${i}">
+          <label class="form-check-label" for="mk${i}">${mk.nama}</label>
+        </div>
+      `
+          )
+          .join("");
+      }
+
+      window.onload = function () {
+        loadDosen();
+        loadKelas();
+        loadMatakuliah();
+      };
+    </script>
+  </body>
+</html>
