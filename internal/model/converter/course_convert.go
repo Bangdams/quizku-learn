@@ -27,3 +27,30 @@ func CourseToResponses(courses *[]entity.Course) *[]model.CourseResponse {
 
 	return &courseResponses
 }
+
+func UserCourseListToResponse(courses *[]entity.Course, totalStudents *[]uint) *model.UserCourseListResponse {
+	var dataItem model.UserCourseListItem
+	var dataItems []model.UserCourseListItem
+
+	log.Println("log from course to response")
+
+	for i, course := range *courses {
+		dataItem.Course = *CourseToResponse(&course)
+
+		for _, class := range course.Classes {
+			dataItem.Classes = append(dataItem.Classes, *ClassToResponse(&class))
+		}
+
+		dataItem.TotalStudents = (*totalStudents)[i]
+		dataItems = append(dataItems, dataItem)
+
+		// reset data class
+		dataItem.Classes = nil
+	}
+
+	responses := &model.UserCourseListResponse{
+		Items: dataItems,
+	}
+
+	return responses
+}

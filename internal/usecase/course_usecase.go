@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -23,6 +24,7 @@ type CourseUsecase interface {
 	Delete(ctx context.Context, courseCode string) error
 	FindAll(ctx context.Context) (*[]model.CourseResponse, error)
 	FindByCourseCode(ctx context.Context, courseCode string) (*model.CourseResponse, error)
+	ListCoursesByUser(ctx context.Context, userId uint) (*model.UserCourseListResponse, error)
 }
 
 type CourseUsecaseImpl struct {
@@ -39,6 +41,27 @@ func NewCourseUsecase(courseRepo repository.CourseRepository, DB *gorm.DB, valid
 	}
 }
 
+// ListCoursesByUser implements CourseUsecase.
+func (courseUsecase *CourseUsecaseImpl) ListCoursesByUser(ctx context.Context, userId uint) (*model.UserCourseListResponse, error) {
+	tx := courseUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	courses, totalStudents, err := courseUsecase.CourseRepo.ListCoursesByUser(tx, userId)
+	if err != nil {
+		log.Println("error get list courses by user with class : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success get list courses by user from course usecase")
+
+	return converter.UserCourseListToResponse(&courses, &totalStudents), nil
+}
+
 // FindByCourseCode implements CourseUsecase.
 func (courseUsecase *CourseUsecaseImpl) FindByCourseCode(ctx context.Context, courseCode string) (*model.CourseResponse, error) {
 	tx := courseUsecase.DB.WithContext(ctx).Begin()
@@ -48,15 +71,20 @@ func (courseUsecase *CourseUsecaseImpl) FindByCourseCode(ctx context.Context, co
 	course.CourseCode = courseCode
 
 	if err := courseUsecase.CourseRepo.FindByCourseCode(tx, course); err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "Course data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "Course data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("Data not found : ")
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
-		log.Println("Data not found : ")
-
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		log.Println("error find by course code : ", err)
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -156,15 +184,20 @@ func (courseUsecase *CourseUsecaseImpl) Delete(ctx context.Context, courseCode s
 
 	_, err := courseUsecase.FindByCourseCode(ctx, courseCode)
 	if err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "Course data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "Course data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error delete course : ", err)
+
+			return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
 		log.Println("error delete course : ", err)
-
-		return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return fiber.ErrInternalServerError
 	}
 
 	err = courseUsecase.CourseRepo.Delete(tx, course)

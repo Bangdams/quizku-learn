@@ -6,6 +6,7 @@ import (
 	"github.com/Bangdams/quizku-learn/internal/model"
 	"github.com/Bangdams/quizku-learn/internal/usecase"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type CourseController interface {
@@ -14,6 +15,7 @@ type CourseController interface {
 	Delete(ctx *fiber.Ctx) error
 	FindAll(ctx *fiber.Ctx) error
 	FindByCourseCode(ctx *fiber.Ctx) error
+	ListCoursesByUser(ctx *fiber.Ctx) error
 }
 
 type CourseControllerImpl struct {
@@ -24,6 +26,22 @@ func NewCourseController(courseUsecase usecase.CourseUsecase) CourseController {
 	return &CourseControllerImpl{
 		CourseUsecase: courseUsecase,
 	}
+}
+
+// ListCoursesByUser implements CourseController.
+func (controller *CourseControllerImpl) ListCoursesByUser(ctx *fiber.Ctx) error {
+	// diambil dari jwt user id
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userId := claims["user_id"].(float64)
+
+	response, err := controller.CourseUsecase.ListCoursesByUser(ctx.UserContext(), uint(userId))
+	if err != nil {
+		log.Println("failed to find by course code")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UserCourseListResponse]{Data: response})
 }
 
 // FindByCourseCode implements CourseController.
