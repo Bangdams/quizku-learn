@@ -17,7 +17,7 @@ type QuizUsecase interface {
 	Create(ctx context.Context, request *model.QuizRequest) (*model.QuizResponse, error)
 	Update(ctx context.Context, request *model.QuizRequest) (*model.QuizResponse, error)
 	Delete(ctx context.Context, request *model.QuizRequest) error
-	QuizDashboard(ctx context.Context) (*[]model.QuizResponse, error)
+	QuizDashboard(ctx context.Context, userId uint) (*[]model.QuizDashboardResponse, error)
 }
 
 type QuizUsecaseImpl struct {
@@ -35,23 +35,36 @@ func NewQuizUsecase(quizRepo repository.QuizRepository, DB *gorm.DB, validate *v
 }
 
 // QuizDashboard implements QuizUsecase.
-func (quizUsecase *QuizUsecaseImpl) QuizDashboard(ctx context.Context) (*[]model.QuizResponse, error) {
+func (quizUsecase *QuizUsecaseImpl) QuizDashboard(ctx context.Context, userId uint) (*[]model.QuizDashboardResponse, error) {
 	tx := quizUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
 	var quizzes = &[]entity.Quiz{}
-	err := quizUsecase.QuizRepo.QuizDashboard(tx, quizzes)
+	err := quizUsecase.QuizRepo.QuizDashboard(tx, quizzes, userId)
 	if err != nil {
-		log.Println("failed when find all repo user : ", err)
+		log.Println("failed when find all repo quiz : ", err)
 		return nil, fiber.ErrInternalServerError
 	}
+
+	// for _, quiz := range *quizzes {
+	// 	log.Println(quiz.CourseCode)
+	// 	log.Println("--------------")
+	// 	log.Println(quiz.Course.Name)
+	// 	log.Println("--------------")
+	// 	log.Println(quiz.Question.Name)
+	// 	log.Println("--------------")
+	// 	log.Println("question_count : ", quiz.Question.QuestionCount)
+	// 	log.Println("==============")
+	// 	log.Println("user_count : ", len(quiz.Class.UserClasses))
+	// 	log.Println("created at : ", quiz.CreatedAt)
+	// }
 
 	if err := tx.Commit().Error; err != nil {
 		log.Println("Failed commit transaction : ", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
-	return nil, nil
+	return converter.QuizDashboardResponses(quizzes), nil
 }
 
 // Create implements QuizUsecase.
@@ -69,7 +82,7 @@ func (quizUsecase *QuizUsecaseImpl) Create(ctx context.Context, request *model.Q
 
 	err = quizUsecase.QuizRepo.Create(tx, quiz)
 	if err != nil {
-		log.Println("failed when create repo user : ", err)
+		log.Println("failed when create repo quiz : ", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -78,7 +91,7 @@ func (quizUsecase *QuizUsecaseImpl) Create(ctx context.Context, request *model.Q
 		return nil, fiber.ErrInternalServerError
 	}
 
-	log.Println("success create from usecase user")
+	log.Println("success create from usecase quiz")
 
 	return converter.QuizToResponse(quiz), nil
 }

@@ -23,18 +23,24 @@ func Bootstrap(config *BootstrapConfig) {
 	courseRepo := repository.NewCourseRepository()
 	classRepo := repository.NewClassRepository()
 	lecturerTeachingRepo := repository.NewLecturerTeachingRepository()
+	questionRepo := repository.NewQuestionRepository()
+	quizRepo := repository.NewQuizRepository()
 
 	// usecase
-	userUsecase := usecase.NewUserUsecase(userRepo, refreshTokenRepo, classRepo, config.DB, config.Validate)
+	userUsecase := usecase.NewUserUsecase(userRepo, refreshTokenRepo, classRepo, lecturerTeachingRepo, config.DB, config.Validate)
 	courseUsecase := usecase.NewCourseUsecase(courseRepo, config.DB, config.Validate)
 	classUsecase := usecase.NewClassUsecase(classRepo, courseRepo, config.DB, config.Validate)
 	lecturerTeachingUsecase := usecase.NewLecturerTeachingUsecase(lecturerTeachingRepo, classRepo, courseRepo, userRepo, config.DB, config.Validate)
+	questionUscase := usecase.NewQuestionUsecase(courseRepo, questionRepo, lecturerTeachingRepo, config.DB, config.Validate)
+	quizUsecase := usecase.NewQuizUsecase(quizRepo, config.DB, config.Validate)
 
 	// controller
 	userController := http.NewUserController(userUsecase)
 	courseController := http.NewCourseController(courseUsecase)
 	classController := http.NewClassController(classUsecase)
 	lecturerTeachingController := http.NewLecturerTeachingController(lecturerTeachingUsecase)
+	questionController := http.NewQuestionController(questionUscase)
+	quizController := http.NewQuizController(quizUsecase)
 
 	routeConfig := route.RouteConfig{
 		App:                        config.App,
@@ -42,6 +48,8 @@ func Bootstrap(config *BootstrapConfig) {
 		CourseController:           courseController,
 		ClassController:            classController,
 		LecturerTeachingController: lecturerTeachingController,
+		QuestionController:         questionController,
+		QuizController:             quizController,
 	}
 
 	routeConfig.Setup()

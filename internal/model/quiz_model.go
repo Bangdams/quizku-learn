@@ -14,9 +14,10 @@ type QuizResponse struct {
 
 type QuizDashboardResponse struct {
 	ID            uint      `json:"id" validate:"required"`
+	QuestionName  string    `json:"question_name" validate:"required"`
 	CourseName    string    `json:"course_name" validate:"required"`
 	QuestionCount uint      `json:"question_count" validate:"required"`
-	StudentCount  uint      `json:"student_count" validate:"required"`
+	StudentCount  int       `json:"student_count" validate:"required"`
 	CreatedAt     time.Time `json:"created_at" validate:"required"`
 }
 

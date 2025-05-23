@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 
@@ -83,7 +84,8 @@ func (lecturerTeachingUsecase *LecturerTeachingUsecaseImpl) DisplayDataWithClass
 	if classId != nil {
 		err := lecturerTeachingUsecase.CourseRepo.FindByIdWithClass(tx, &courses, classId)
 		if err != nil {
-			return nil, err
+			log.Println("error find by id with class : ", err)
+			return nil, fiber.ErrInternalServerError
 		}
 	}
 
@@ -107,15 +109,21 @@ func (lecturerTeachingUsecase *LecturerTeachingUsecaseImpl) FindById(ctx context
 
 	err := lecturerTeachingUsecase.LecturerTeachingRepo.FindById(tx, lecturerTeaching)
 	if err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "LecturerTeaching data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "LecturerTeaching data was not found",
+				Details: []string{},
+			}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by id lecturerTeaching : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
 		log.Println("error find by id lecturerTeaching : ", err)
-
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -155,14 +163,19 @@ func (lecturerTeachingUsecase *LecturerTeachingUsecaseImpl) Create(ctx context.C
 
 	err = lecturerTeachingUsecase.UserRepo.FindById(tx, &entity.User{ID: request.UserID})
 	if err != nil {
-		errorResponse.Message = "User data was not found"
-		errorResponse.Details = []string{}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "User data was not found"
+			errorResponse.Details = []string{}
 
-		jsonString, _ := json.Marshal(errorResponse)
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by id user : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
 
 		log.Println("error find by id user : ", err)
-
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return nil, fiber.ErrInternalServerError
 	}
 
 	var lecturerTeachings []entity.LecturerTeaching
@@ -170,27 +183,53 @@ func (lecturerTeachingUsecase *LecturerTeachingUsecaseImpl) Create(ctx context.C
 	for _, item := range request.Teachings {
 		err = lecturerTeachingUsecase.ClassRepo.FindById(tx, &entity.Class{ID: item.ClassID})
 		if err != nil {
-			errorResponse.Message = "Class data was not found"
-			errorResponse.Details = []string{}
-
-			jsonString, _ := json.Marshal(errorResponse)
-
-			log.Println("error find by id class : ", err)
-
-			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
-		}
-
-		for _, code := range item.CourseCodes {
-			err = lecturerTeachingUsecase.CourseRepo.FindByCourseCode(tx, &entity.Course{CourseCode: code})
-			if err != nil {
-				errorResponse.Message = "Course data was not found"
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				errorResponse.Message = "Class data was not found"
 				errorResponse.Details = []string{}
 
 				jsonString, _ := json.Marshal(errorResponse)
 
-				log.Println("error find by Code course : ", err)
+				log.Println("error find by id class : ", err)
 
 				return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+			}
+
+			log.Println("error find by id class : ", err)
+			return nil, fiber.ErrInternalServerError
+		}
+
+		for _, code := range item.CourseCodes {
+			for _, lecturerTeaching := range lecturerTeachings {
+				if lecturerTeaching.ClassId == item.ClassID && lecturerTeaching.CourseCode == code {
+					log.Println("duplicate entry")
+
+					errorResponse.Message = "Duplicate entry"
+					errorResponse.Details = []string{"Duplicate data detected in the request. Please remove duplicates and try again."}
+
+					jsonString, _ := json.Marshal(errorResponse)
+
+					return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
+				}
+			}
+
+			var count int64
+			err = lecturerTeachingUsecase.CourseRepo.FindWithClassSubject(tx, &count, code, item.ClassID)
+			if err != nil {
+				log.Println("error find by Code course : ", err)
+				return nil, fiber.ErrInternalServerError
+			}
+
+			if count == 0 {
+				errorResponse.Message = "Course data was not found"
+				errorResponse.Details = []string{
+					fmt.Sprintf("No course found with code %s in class ID %d.", code, item.ClassID),
+				}
+
+				jsonString, _ := json.Marshal(errorResponse)
+
+				log.Printf("No course found with code %s in class ID %d.", code, item.ClassID)
+
+				return nil, fiber.NewError(fiber.StatusNotFound, string(jsonString))
 			}
 
 			lecturer := entity.LecturerTeaching{

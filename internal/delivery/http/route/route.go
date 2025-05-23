@@ -12,9 +12,12 @@ type RouteConfig struct {
 	CourseController           http.CourseController
 	ClassController            http.ClassController
 	LecturerTeachingController http.LecturerTeachingController
+	QuestionController         http.QuestionController
+	QuizController             http.QuizController
 }
 
 func (config *RouteConfig) Setup() {
+	// API ADMIN
 	// API for user
 	config.App.Get("/api/users", util.CheckLevel("admin"), config.UserController.FindAll)
 	config.App.Get("/api/users/:email", util.CheckLevel("admin"), config.UserController.FindByEmail)
@@ -24,9 +27,6 @@ func (config *RouteConfig) Setup() {
 
 	// show dashboard
 	config.App.Get("/api/admin-dashboard", util.CheckLevel("admin"), config.UserController.AdminDashboardReport)
-
-	// ubah jadi levelnya jadi dosen
-	config.App.Get("/api/lecturer-dashboard", util.CheckLevel("admin"), config.UserController.LecturerDashboardReport)
 
 	// API for course
 	config.App.Get("/api/courses", util.CheckLevel("admin"), config.CourseController.FindAll)
@@ -52,6 +52,20 @@ func (config *RouteConfig) Setup() {
 
 	// display Lecturer Teaching for insert
 	config.App.Get("/api/lecturer-teachings", util.CheckLevel("admin"), config.LecturerTeachingController.DisplayData)
+
+	// API DOSEN
+	// API question
+	config.App.Post("/api/questions", util.CheckLevel("dosen"), config.QuestionController.Create)
+	config.App.Get("/api/question/:course_code", util.CheckLevel("dosen"), config.QuestionController.FindByCourseCode)
+
+	// API course
+	config.App.Get("/api/courses-by-user", util.CheckLevel("dosen"), config.CourseController.ListCoursesByUser)
+
+	// API show dashboard
+	config.App.Get("/api/lecturer-dashboard", util.CheckLevel("dosen"), config.UserController.LecturerDashboardReport)
+
+	// API quiz
+	config.App.Get("/api/quizz-dashboard", util.CheckLevel("dosen"), config.QuizController.QuizDashboard)
 
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)

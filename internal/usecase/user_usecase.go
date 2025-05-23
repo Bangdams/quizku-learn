@@ -34,24 +34,90 @@ type UserUsecase interface {
 	Login(ctx context.Context, request *model.LoginRequest, requestRefreshToken string) (*model.LoginResponse, string, error)
 	Logout(ctx context.Context, refreshToken string) error
 	Refresh(ctx context.Context, refreshToken string) (*model.LoginResponse, error)
+	AdminDashboardReport(ctx context.Context) (*model.AdminDashboardReportResponse, error)
+	LecturerDashboardReport(ctx context.Context, userId uint) (*model.LecturerDashboardReportResponse, error)
 }
 
 type UserUsecaseImpl struct {
-	UserRepo         repository.UserRepository
-	RefreshTokenRepo repository.RefreshTokenRepository
-	ClassRepo        repository.ClassRepository
-	DB               *gorm.DB
-	Validate         *validator.Validate
+	UserRepo             repository.UserRepository
+	RefreshTokenRepo     repository.RefreshTokenRepository
+	ClassRepo            repository.ClassRepository
+	LecturerTeachingRepo repository.LecturerTeachingRepository
+	DB                   *gorm.DB
+	Validate             *validator.Validate
 }
 
-func NewUserUsecase(userRepo repository.UserRepository, RefreshTokenRepo repository.RefreshTokenRepository, classRepo repository.ClassRepository, DB *gorm.DB, validate *validator.Validate) UserUsecase {
+func NewUserUsecase(userRepo repository.UserRepository, RefreshTokenRepo repository.RefreshTokenRepository, classRepo repository.ClassRepository, LecturerTeachingRepo repository.LecturerTeachingRepository, DB *gorm.DB, validate *validator.Validate) UserUsecase {
 	return &UserUsecaseImpl{
-		UserRepo:         userRepo,
-		RefreshTokenRepo: RefreshTokenRepo,
-		ClassRepo:        classRepo,
-		DB:               DB,
-		Validate:         validate,
+		UserRepo:             userRepo,
+		RefreshTokenRepo:     RefreshTokenRepo,
+		ClassRepo:            classRepo,
+		LecturerTeachingRepo: LecturerTeachingRepo,
+		DB:                   DB,
+		Validate:             validate,
 	}
+}
+
+// AdminDashboardReport implements UserUsecase.
+func (userUsecase *UserUsecaseImpl) AdminDashboardReport(ctx context.Context) (*model.AdminDashboardReportResponse, error) {
+	tx := userUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	response := &model.AdminDashboardReportResponse{}
+
+	userUsecase.UserRepo.AdminDashboardReport(tx, response)
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success show report from admin dashboard")
+
+	return response, nil
+}
+
+// LecturerDashboardReport implements UserUsecase.
+func (userUsecase *UserUsecaseImpl) LecturerDashboardReport(ctx context.Context, userId uint) (*model.LecturerDashboardReportResponse, error) {
+	tx := userUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	var errorResponse model.ErrorResponse
+
+	response := &model.LecturerDashboardReportResponse{}
+	lecturerTeachings := &[]entity.LecturerTeaching{}
+
+	err := userUsecase.LecturerTeachingRepo.FindLecturerClasses(tx, userId, lecturerTeachings)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "Data not found"
+			errorResponse.Details = []string{
+				"The lecturer is not assigned to any classes.",
+			}
+
+			jsonString, _ := json.Marshal(errorResponse)
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error FindLecturerClasses from user usecase : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	var classIds []uint
+	for _, value := range *lecturerTeachings {
+		classIds = append(classIds, value.ClassId)
+	}
+
+	userUsecase.UserRepo.LecturerDashboardReport(tx, userId, classIds, response)
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success show report from lecturer dashboard")
+
+	return response, nil
 }
 
 // FindByRole implements UserUsecase.
@@ -197,7 +263,7 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 
 			jsonString, _ := json.Marshal(errorResponse)
 
-			return nil, fiber.NewError(fiber.ErrBadGateway.Code, string(jsonString))
+			return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
 		}
 
 		class := &entity.Class{
@@ -206,14 +272,19 @@ func (userUsecase *UserUsecaseImpl) Create(ctx context.Context, request *model.U
 
 		err := userUsecase.ClassRepo.FindById(tx, class)
 		if err != nil {
-			errorResponse.Message = "Class data was not found"
-			errorResponse.Details = []string{}
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				errorResponse.Message = "Class data was not found"
+				errorResponse.Details = []string{}
 
-			jsonString, _ := json.Marshal(errorResponse)
+				jsonString, _ := json.Marshal(errorResponse)
+
+				log.Println("error find by id class in create user repo : ", err)
+
+				return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+			}
 
 			log.Println("error find by id class in create user repo : ", err)
-
-			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+			return nil, fiber.ErrInternalServerError
 		}
 
 		user.UserClass.ClassId = request.ClassId
@@ -245,15 +316,20 @@ func (userUsecase *UserUsecaseImpl) Delete(ctx context.Context, userId uint) err
 
 	err := userUsecase.UserRepo.FindById(tx, user)
 	if err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "User data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "User data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error delete user : ", err)
+
+			return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
 		log.Println("error delete user : ", err)
-
-		return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return fiber.ErrInternalServerError
 	}
 
 	err = userUsecase.UserRepo.Delete(tx, user)
@@ -452,13 +528,18 @@ func (userUsecase *UserUsecaseImpl) Update(ctx context.Context, request *model.U
 
 	err = userUsecase.UserRepo.FindByEmail(tx, user)
 	if err != nil {
-		errorResponse.Message = "User data was not found"
-		errorResponse.Details = []string{}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "User data was not found"
+			errorResponse.Details = []string{}
 
-		jsonString, _ := json.Marshal(errorResponse)
-		log.Println("Data not found")
+			jsonString, _ := json.Marshal(errorResponse)
+			log.Println("Data not found")
 
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error find by email : ", err)
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if request.Password != "" {

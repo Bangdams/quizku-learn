@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -71,26 +72,37 @@ func (classUsecase *ClassUsecaseImpl) ClassSubject(ctx context.Context, request 
 
 	err = classUsecase.ClassRepo.FindById(tx, class)
 	if err != nil {
-		errorResponse.Message = "Class data was not found"
-		errorResponse.Details = []string{}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "Class data was not found"
+			errorResponse.Details = []string{}
 
-		jsonString, _ := json.Marshal(errorResponse)
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by id class : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
 
 		log.Println("error find by id class : ", err)
-
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return nil, fiber.ErrInternalServerError
 	}
 
 	courses := &[]entity.Course{}
 
 	err = classUsecase.CourseRepo.FindAllByCourseCode(tx, request.CourseCodes, courses)
 	if err != nil {
+		log.Println("error find by course code : ", err)
+
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if len(*courses) == 0 {
 		errorResponse.Message = "Course data was not found"
 		errorResponse.Details = []string{}
 
 		jsonString, _ := json.Marshal(errorResponse)
 
-		log.Println("error find by course code : ", err)
+		log.Println("course data was not found")
 
 		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 	}
@@ -172,15 +184,20 @@ func (classUsecase *ClassUsecaseImpl) Delete(ctx context.Context, classId uint) 
 
 	err := classUsecase.ClassRepo.FindById(tx, class)
 	if err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "Class data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "Class data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error delete class : ", err)
+
+			return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
 		log.Println("error delete class : ", err)
-
-		return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return fiber.ErrInternalServerError
 	}
 
 	err = classUsecase.ClassRepo.Delete(tx, class)
@@ -230,15 +247,20 @@ func (classUsecase *ClassUsecaseImpl) FindByName(ctx context.Context, className 
 	class.Name = className
 
 	if err := classUsecase.ClassRepo.FindByName(tx, class); err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "Class data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "Class data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by name class : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
 		log.Println("error find by name class : ", err)
-
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return nil, fiber.ErrInternalServerError
 	}
 
 	if err := tx.Commit().Error; err != nil {
@@ -282,15 +304,20 @@ func (classUsecase *ClassUsecaseImpl) Update(ctx context.Context, request *model
 
 	err = classUsecase.ClassRepo.FindById(tx, class)
 	if err != nil {
-		errorResponse := model.ErrorResponse{
-			Message: "Class data was not found",
-			Details: []string{},
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "Class data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error update class : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
 		}
-		jsonString, _ := json.Marshal(errorResponse)
 
 		log.Println("error update class : ", err)
-
-		return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		return nil, fiber.ErrInternalServerError
 	}
 
 	class.Name = request.Name

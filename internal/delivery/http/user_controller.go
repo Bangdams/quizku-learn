@@ -21,6 +21,8 @@ type UserController interface {
 	Login(ctx *fiber.Ctx) error
 	Logout(ctx *fiber.Ctx) error
 	Refresh(ctx *fiber.Ctx) error
+	AdminDashboardReport(ctx *fiber.Ctx) error
+	LecturerDashboardReport(ctx *fiber.Ctx) error
 }
 
 type UserControllerImpl struct {
@@ -31,6 +33,33 @@ func NewUserController(userUsecase usecase.UserUsecase) UserController {
 	return &UserControllerImpl{
 		UserUsecase: userUsecase,
 	}
+}
+
+// AdminDashboardReport implements UserController.
+func (controller *UserControllerImpl) AdminDashboardReport(ctx *fiber.Ctx) error {
+	response, err := controller.UserUsecase.AdminDashboardReport(ctx.UserContext())
+	if err != nil {
+		log.Println("failed to show dashborad")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.AdminDashboardReportResponse]{Data: response})
+}
+
+// LecturerDashboardReport implements UserController.
+func (controller *UserControllerImpl) LecturerDashboardReport(ctx *fiber.Ctx) error {
+	// diambil dari jwt user id
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userId := claims["user_id"].(float64)
+
+	response, err := controller.UserUsecase.LecturerDashboardReport(ctx.UserContext(), uint(userId))
+	if err != nil {
+		log.Println("failed to show dashborad")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.LecturerDashboardReportResponse]{Data: response})
 }
 
 // Refresh implements UserController.
@@ -157,7 +186,8 @@ func (controller *UserControllerImpl) Login(ctx *fiber.Ctx) error {
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		HTTPOnly: true,
-		Secure:   true,
+		Secure:   false,
+		SameSite: "Lax",
 		Path:     "/",
 		MaxAge:   60 * 60 * 24 * lifeTime,
 	})
