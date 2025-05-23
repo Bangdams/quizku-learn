@@ -39,7 +39,7 @@ func (controller *LecturerTeachingrollerImpl) DisplayData(ctx *fiber.Ctx) error 
 
 		for _, strId := range strIds {
 			if !validID.MatchString(strId) {
-				return ctx.Status(400).JSON(fiber.Map{"error": "ID harus berupa angka"})
+				return ctx.Status(400).JSON(fiber.Map{"error": "The ID must be a number."})
 			}
 
 			id, err := strconv.Atoi(strId)
