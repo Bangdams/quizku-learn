@@ -31,7 +31,9 @@ func (controller *QuizControllerImpl) QuizDashboard(ctx *fiber.Ctx) error {
 	claims := userToken.Claims.(jwt.MapClaims)
 	userID := claims["user_id"].(float64)
 
-	responses, err := controller.QuizUsecase.QuizDashboard(ctx.UserContext(), uint(userID))
+	status := ctx.Query("status")
+
+	responses, err := controller.QuizUsecase.QuizDashboard(ctx.UserContext(), uint(userID), status)
 	if err != nil {
 		log.Println("failed to show quiz dashborad")
 		return err

@@ -17,7 +17,7 @@ type QuizUsecase interface {
 	Create(ctx context.Context, request *model.QuizRequest) (*model.QuizResponse, error)
 	Update(ctx context.Context, request *model.QuizRequest) (*model.QuizResponse, error)
 	Delete(ctx context.Context, request *model.QuizRequest) error
-	QuizDashboard(ctx context.Context, userId uint) (*[]model.QuizDashboardResponse, error)
+	QuizDashboard(ctx context.Context, userId uint, query string) (*[]model.QuizDashboardResponse, error)
 }
 
 type QuizUsecaseImpl struct {
@@ -35,15 +35,30 @@ func NewQuizUsecase(quizRepo repository.QuizRepository, DB *gorm.DB, validate *v
 }
 
 // QuizDashboard implements QuizUsecase.
-func (quizUsecase *QuizUsecaseImpl) QuizDashboard(ctx context.Context, userId uint) (*[]model.QuizDashboardResponse, error) {
+func (quizUsecase *QuizUsecaseImpl) QuizDashboard(ctx context.Context, userId uint, query string) (*[]model.QuizDashboardResponse, error) {
 	tx := quizUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
 	var quizzes = &[]entity.Quiz{}
-	err := quizUsecase.QuizRepo.QuizDashboard(tx, quizzes, userId)
-	if err != nil {
-		log.Println("failed when find all repo quiz : ", err)
-		return nil, fiber.ErrInternalServerError
+
+	if query == "active" {
+		err := quizUsecase.QuizRepo.QuizDashboardActive(tx, quizzes, userId)
+		if err != nil {
+			log.Println("failed when find all repo quiz : ", err)
+			return nil, fiber.ErrInternalServerError
+		}
+	} else if query == "archived" {
+		err := quizUsecase.QuizRepo.QuizDashboardArchived(tx, quizzes, userId)
+		if err != nil {
+			log.Println("failed when find all repo quiz : ", err)
+			return nil, fiber.ErrInternalServerError
+		}
+	} else {
+		err := quizUsecase.QuizRepo.QuizDashboard(tx, quizzes, userId)
+		if err != nil {
+			log.Println("failed when find all repo quiz : ", err)
+			return nil, fiber.ErrInternalServerError
+		}
 	}
 
 	// for _, quiz := range *quizzes {
