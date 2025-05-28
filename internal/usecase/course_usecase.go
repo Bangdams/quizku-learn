@@ -24,7 +24,8 @@ type CourseUsecase interface {
 	Delete(ctx context.Context, courseCode string) error
 	FindAll(ctx context.Context) (*[]model.CourseResponse, error)
 	FindByCourseCode(ctx context.Context, courseCode string) (*model.CourseResponse, error)
-	ListCoursesByUser(ctx context.Context, userId uint) (*model.UserCourseListResponse, error)
+	ListCoursesByUserWithClass(ctx context.Context, userId uint) (*model.UserCourseListResponse, error)
+	ListCoursesByUser(ctx context.Context, userId uint) (*[]model.CourseResponse, error)
 }
 
 type CourseUsecaseImpl struct {
@@ -42,11 +43,34 @@ func NewCourseUsecase(courseRepo repository.CourseRepository, DB *gorm.DB, valid
 }
 
 // ListCoursesByUser implements CourseUsecase.
-func (courseUsecase *CourseUsecaseImpl) ListCoursesByUser(ctx context.Context, userId uint) (*model.UserCourseListResponse, error) {
+func (courseUsecase *CourseUsecaseImpl) ListCoursesByUser(ctx context.Context, userId uint) (*[]model.CourseResponse, error) {
 	tx := courseUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	courses, totalStudents, err := courseUsecase.CourseRepo.ListCoursesByUser(tx, userId)
+	var courses = &[]entity.Course{}
+
+	err := courseUsecase.CourseRepo.ListCoursesByUser(tx, courses, userId)
+	if err != nil {
+		log.Println("error get list courses by user : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success get list courses by user from course usecase")
+
+	return converter.CourseToResponses(courses), nil
+}
+
+// ListCoursesByUserWithClass implements CourseUsecase.
+func (courseUsecase *CourseUsecaseImpl) ListCoursesByUserWithClass(ctx context.Context, userId uint) (*model.UserCourseListResponse, error) {
+	tx := courseUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	courses, totalStudents, err := courseUsecase.CourseRepo.ListCoursesByUserWithClass(tx, userId)
 	if err != nil {
 		log.Println("error get list courses by user with class : ", err)
 		return nil, fiber.ErrInternalServerError

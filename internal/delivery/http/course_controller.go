@@ -15,6 +15,7 @@ type CourseController interface {
 	Delete(ctx *fiber.Ctx) error
 	FindAll(ctx *fiber.Ctx) error
 	FindByCourseCode(ctx *fiber.Ctx) error
+	ListCoursesByUserWithClass(ctx *fiber.Ctx) error
 	ListCoursesByUser(ctx *fiber.Ctx) error
 }
 
@@ -35,7 +36,23 @@ func (controller *CourseControllerImpl) ListCoursesByUser(ctx *fiber.Ctx) error 
 	claims := userToken.Claims.(jwt.MapClaims)
 	userId := claims["user_id"].(float64)
 
-	response, err := controller.CourseUsecase.ListCoursesByUser(ctx.UserContext(), uint(userId))
+	responses, err := controller.CourseUsecase.ListCoursesByUser(ctx.UserContext(), uint(userId))
+	if err != nil {
+		log.Println("failed to find courses by userId")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponses[model.CourseResponse]{Data: responses})
+}
+
+// ListCoursesByUserWithClass implements CourseController.
+func (controller *CourseControllerImpl) ListCoursesByUserWithClass(ctx *fiber.Ctx) error {
+	// diambil dari jwt user id
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userId := claims["user_id"].(float64)
+
+	response, err := controller.CourseUsecase.ListCoursesByUserWithClass(ctx.UserContext(), uint(userId))
 	if err != nil {
 		log.Println("failed to find by course code")
 		return err

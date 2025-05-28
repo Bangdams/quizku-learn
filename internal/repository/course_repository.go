@@ -14,7 +14,8 @@ type CourseRepository interface {
 	FindAllByCourseCode(tx *gorm.DB, courseCode []string, courses *[]entity.Course) error
 	FindByIdWithClass(tx *gorm.DB, courses *[]entity.Course, classId []uint) error
 	FindWithClassSubject(tx *gorm.DB, count *int64, courseCode string, classId uint) error
-	ListCoursesByUser(tx *gorm.DB, userId uint) ([]entity.Course, []uint, error)
+	ListCoursesByUserWithClass(tx *gorm.DB, userId uint) ([]entity.Course, []uint, error)
+	ListCoursesByUser(tx *gorm.DB, courses *[]entity.Course, userId uint) error
 }
 
 type CourseRepositoryImpl struct {
@@ -23,6 +24,16 @@ type CourseRepositoryImpl struct {
 
 func NewCourseRepository() CourseRepository {
 	return &CourseRepositoryImpl{}
+}
+
+// ListCoursesByUser implements CourseRepository.
+func (repository *CourseRepositoryImpl) ListCoursesByUser(tx *gorm.DB, courses *[]entity.Course, userId uint) error {
+	return tx.Table("courses").
+		Select("courses.course_code, courses.name").
+		Joins("JOIN class_subjects ON courses.course_code = class_subjects.course_code").
+		Joins("JOIN user_classes ON class_subjects.class_id = user_classes.class_id").
+		Where("user_classes.user_id = ?", userId).
+		Find(&courses).Error
 }
 
 // FindWithClassSubject implements CourseRepository.
@@ -38,8 +49,8 @@ func (repository *CourseRepositoryImpl) FindByIdWithClass(tx *gorm.DB, courses *
 	return tx.Preload("Classes", "id IN ?", classId).Find(courses).Error
 }
 
-// ListCoursesByUser implements ClassRepository.
-func (repository *CourseRepositoryImpl) ListCoursesByUser(tx *gorm.DB, userId uint) ([]entity.Course, []uint, error) {
+// ListCoursesByUserWithClass implements ClassRepository.
+func (repository *CourseRepositoryImpl) ListCoursesByUserWithClass(tx *gorm.DB, userId uint) ([]entity.Course, []uint, error) {
 	var lecturerTeachings []entity.LecturerTeaching
 	err := tx.Preload("Class").Preload("Course").
 		Where("user_id = ?", userId).

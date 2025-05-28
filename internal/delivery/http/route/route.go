@@ -59,13 +59,19 @@ func (config *RouteConfig) Setup() {
 	config.App.Get("/api/question/:course_code", util.CheckLevel("dosen"), config.QuestionController.FindByCourseCode)
 
 	// API course
-	config.App.Get("/api/courses-by-user", util.CheckLevel("dosen"), config.CourseController.ListCoursesByUser)
+	config.App.Get("/api/courses-by-user-with-class", util.CheckLevel("dosen"), config.CourseController.ListCoursesByUserWithClass)
 
 	// API show dashboard
 	config.App.Get("/api/lecturer-dashboard", util.CheckLevel("dosen"), config.UserController.LecturerDashboardReport)
 
 	// API quiz
 	config.App.Get("/api/quizz-dashboard", util.CheckLevel("dosen"), config.QuizController.QuizDashboard)
+
+	// API MAHASISWA
+	// API course
+	config.App.Get("/api/courses-by-user", util.CheckLevel("mahasiswa"), config.CourseController.ListCoursesByUser)
+
+	// API quiz
 
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)
