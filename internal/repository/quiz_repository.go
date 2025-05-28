@@ -11,6 +11,7 @@ type QuizRepository interface {
 	Create(tx *gorm.DB, quiz *entity.Quiz) error
 	Update(tx *gorm.DB, quiz *entity.Quiz) error
 	Delete(tx *gorm.DB, quiz *entity.Quiz) error
+	FindById(tx *gorm.DB, quiz *entity.Quiz) error
 	QuizDashboard(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	QuizDashboardActive(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	QuizDashboardArchived(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
@@ -22,6 +23,11 @@ type QuizRepositoryImpl struct {
 
 func NewQuizRepository() QuizRepository {
 	return &QuizRepositoryImpl{}
+}
+
+// FindById implements QuizRepository.
+func (repository *QuizRepositoryImpl) FindById(tx *gorm.DB, quiz *entity.Quiz) error {
+	return tx.First(quiz).Error
 }
 
 // QuizDashboardActive implements QuizRepository.

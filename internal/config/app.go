@@ -32,7 +32,7 @@ func Bootstrap(config *BootstrapConfig) {
 	classUsecase := usecase.NewClassUsecase(classRepo, courseRepo, config.DB, config.Validate)
 	lecturerTeachingUsecase := usecase.NewLecturerTeachingUsecase(lecturerTeachingRepo, classRepo, courseRepo, userRepo, config.DB, config.Validate)
 	questionUscase := usecase.NewQuestionUsecase(courseRepo, questionRepo, lecturerTeachingRepo, config.DB, config.Validate)
-	quizUsecase := usecase.NewQuizUsecase(quizRepo, config.DB, config.Validate)
+	quizUsecase := usecase.NewQuizUsecase(quizRepo, classRepo, questionRepo, lecturerTeachingRepo, config.DB, config.Validate)
 
 	// controller
 	userController := http.NewUserController(userUsecase)

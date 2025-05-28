@@ -25,6 +25,5 @@ type QuizRequest struct {
 	CourseCode string `json:"course_code" validate:"required"`
 	ClassId    uint   `json:"class_id" validate:"required"`
 	QuestionId uint   `json:"question_id" validate:"required"`
-	Deadline   uint   `json:"deadline" validate:"required"`
-	Status     string `json:"status" validate:"required"`
+	Deadline   string `json:"deadline" validate:"required"`
 }

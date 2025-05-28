@@ -66,6 +66,8 @@ func (config *RouteConfig) Setup() {
 
 	// API quiz
 	config.App.Get("/api/quizz-dashboard", util.CheckLevel("dosen"), config.QuizController.QuizDashboard)
+	config.App.Post("/api/quizz", util.CheckLevel("dosen"), config.QuizController.Create)
+	config.App.Delete("/api/quizz/:quiz_id", util.CheckLevel("dosen"), config.QuizController.Delete)
 
 	// API MAHASISWA
 	// API course

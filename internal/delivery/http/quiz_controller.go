@@ -44,12 +44,40 @@ func (controller *QuizControllerImpl) QuizDashboard(ctx *fiber.Ctx) error {
 
 // Create implements QuizController.
 func (controller *QuizControllerImpl) Create(ctx *fiber.Ctx) error {
-	panic("unimplemented")
+	request := new(model.QuizRequest)
+
+	if err := ctx.BodyParser(request); err != nil {
+		log.Println("failed to parse request : ", err)
+		return fiber.ErrBadRequest
+	}
+
+	// diambil dari jwt user id
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userId := claims["user_id"].(float64)
+
+	response, err := controller.QuizUsecase.Create(ctx.UserContext(), request, uint(userId))
+	if err != nil {
+		log.Println("failed to create quiz")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.QuizResponse]{Data: response})
 }
 
 // Delete implements QuizController.
 func (controller *QuizControllerImpl) Delete(ctx *fiber.Ctx) error {
-	panic("unimplemented")
+	id, err := ctx.ParamsInt("quiz_id")
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if err := controller.QuizUsecase.Delete(ctx.UserContext(), uint(id)); err != nil {
+		log.Println("failed to delete quiz")
+		return err
+	}
+
+	return nil
 }
 
 // Update implements QuizController.
