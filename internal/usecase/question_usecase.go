@@ -121,12 +121,9 @@ func (questionUsecase *QuestionUsecaseImpl) Create(ctx context.Context, request 
 		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
 	}
 
-	lecturerTeaching := &entity.LecturerTeaching{
-		CourseCode: request.CourseCode,
-		UserId:     request.UserId,
-	}
+	lecturerTeachings := &[]entity.LecturerTeaching{}
 
-	err = questionUsecase.LecturerTeachingRepo.FindLecturerTeaching(tx, lecturerTeaching)
+	err = questionUsecase.LecturerTeachingRepo.FindLecturerTeaching(tx, request.CourseCode, request.UserId, lecturerTeachings)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			errorResponse.Message = "Data not found"

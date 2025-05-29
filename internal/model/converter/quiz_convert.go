@@ -7,6 +7,32 @@ import (
 	"github.com/Bangdams/quizku-learn/internal/model"
 )
 
+func QuizStudentToResponse(quiz *entity.Quiz) *model.QuizStudentResponse {
+	log.Println("log from Quiz Student To Response")
+
+	return &model.QuizStudentResponse{
+		ID:            quiz.ID,
+		LecturerName:  quiz.Question.User.Name,
+		CourseName:    quiz.Course.Name,
+		QuestionName:  quiz.Question.Name,
+		Deadline:      quiz.Deadline,
+		QuestionCount: quiz.Question.QuestionCount,
+		Duration:      quiz.Question.Duration,
+	}
+}
+
+func QuizStudentToResponses(quizzes *[]entity.Quiz) *[]model.QuizStudentResponse {
+	var quizResponses []model.QuizStudentResponse
+
+	log.Println("log from Quiz Student To Responses")
+
+	for _, quiz := range *quizzes {
+		quizResponses = append(quizResponses, *QuizStudentToResponse(&quiz))
+	}
+
+	return &quizResponses
+}
+
 func QuizDashboardResponse(quiz *entity.Quiz) *model.QuizDashboardResponse {
 	log.Println("log from quiz to response")
 

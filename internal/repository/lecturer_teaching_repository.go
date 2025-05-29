@@ -10,7 +10,7 @@ type LecturerTeachingRepository interface {
 	Delete(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
 	FindById(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
 	OneDataCheck(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
-	FindLecturerTeaching(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
+	FindLecturerTeaching(tx *gorm.DB, courseCode string, userId uint, lecturerTeaching *[]entity.LecturerTeaching) error
 	FindLecturerClasses(tx *gorm.DB, userId uint, lecturerTeachings *[]entity.LecturerTeaching) error
 	FindByCourseCode(tx *gorm.DB, userId uint, courseCode string) error
 }
@@ -47,6 +47,7 @@ func (repository *LecturerTeachingRepositoryImpl) OneDataCheck(tx *gorm.DB, lect
 }
 
 // FindLecturerTeaching implements LecturerTeachingRepository.
-func (repository *LecturerTeachingRepositoryImpl) FindLecturerTeaching(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error {
-	return tx.Where("course_code = ? AND user_id = ?", lecturerTeaching.CourseCode, lecturerTeaching.UserId).First(lecturerTeaching).Error
+func (repository *LecturerTeachingRepositoryImpl) FindLecturerTeaching(tx *gorm.DB, courseCode string, userId uint, lecturerTeaching *[]entity.LecturerTeaching) error {
+	return tx.Where("course_code = ? AND user_id = ?", courseCode, userId).
+		Find(lecturerTeaching).Error
 }

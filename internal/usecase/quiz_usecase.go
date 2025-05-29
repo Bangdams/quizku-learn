@@ -22,6 +22,7 @@ type QuizUsecase interface {
 	Update(ctx context.Context, request *model.QuizRequest) (*model.QuizResponse, error)
 	Delete(ctx context.Context, quizId uint) error
 	QuizDashboard(ctx context.Context, userId uint, query string) (*[]model.QuizDashboardResponse, error)
+	FindByUserAndCourse(ctx context.Context, userId uint, courseCode string) (*[]model.QuizStudentResponse, error)
 }
 
 type QuizUsecaseImpl struct {
@@ -42,6 +43,28 @@ func NewQuizUsecase(quizRepo repository.QuizRepository, classRepo repository.Cla
 		DB:                   DB,
 		Validate:             validate,
 	}
+}
+
+// FindByUserAndCourse implements QuizUsecase.
+func (quizUsecase *QuizUsecaseImpl) FindByUserAndCourse(ctx context.Context, userId uint, courseCode string) (*[]model.QuizStudentResponse, error) {
+	tx := quizUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	var quizzes = &[]entity.Quiz{}
+
+	err := quizUsecase.QuizRepo.FindByUserAndCourse(tx, quizzes, userId, courseCode)
+	if err != nil {
+		log.Println("failed when find by user and course : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success find by user and course from usecase quiz")
+	return converter.QuizStudentToResponses(quizzes), nil
 }
 
 // QuizDashboard implements QuizUsecase.
@@ -90,14 +113,11 @@ func (quizUsecase *QuizUsecaseImpl) Create(ctx context.Context, request *model.Q
 		return nil, fiber.ErrBadRequest
 	}
 
-	lecturerTeaching := &entity.LecturerTeaching{
-		CourseCode: request.CourseCode,
-		UserId:     userId,
-	}
+	lecturerTeachings := &[]entity.LecturerTeaching{}
 
 	var errorResponse model.ErrorResponse
 
-	err = quizUsecase.LecturerTeachingRepo.FindLecturerTeaching(tx, lecturerTeaching)
+	err = quizUsecase.LecturerTeachingRepo.FindLecturerTeaching(tx, request.CourseCode, userId, lecturerTeachings)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			errorResponse.Message = "Data not found"
@@ -131,7 +151,15 @@ func (quizUsecase *QuizUsecaseImpl) Create(ctx context.Context, request *model.Q
 		return nil, fiber.ErrInternalServerError
 	}
 
-	if lecturerTeaching.ClassId != request.ClassId {
+	found := false
+	for _, lecturerTeaching := range *lecturerTeachings {
+		if lecturerTeaching.ClassId == request.ClassId {
+			found = true
+			break
+		}
+	}
+
+	if !found {
 		errorResponse.Message = "Data not found"
 		errorResponse.Details = []string{
 			fmt.Sprintf("The lecturer does not teach in this class : %s", class.Name),

@@ -15,6 +15,7 @@ type QuizRepository interface {
 	QuizDashboard(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	QuizDashboardActive(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	QuizDashboardArchived(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
+	FindByUserAndCourse(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint, courseCode string) error
 }
 
 type QuizRepositoryImpl struct {
@@ -23,6 +24,19 @@ type QuizRepositoryImpl struct {
 
 func NewQuizRepository() QuizRepository {
 	return &QuizRepositoryImpl{}
+}
+
+// FindById implements QuizRepository.
+func (repository *QuizRepositoryImpl) FindByUserAndCourse(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint, courseCode string) error {
+
+	return tx.Joins("JOIN user_classes ON user_classes.class_id = quizzes.class_id").
+		Joins("JOIN courses ON quizzes.course_code = courses.course_code").
+		Joins("JOIN questions ON quizzes.question_id = questions.id").
+		Where("user_classes.user_id = ? AND courses.course_code = ?", userId, courseCode).
+		Preload("Class.UserClasses").
+		Preload("Course").
+		Preload("Question.User").
+		Find(&quizzes).Error
 }
 
 // FindById implements QuizRepository.

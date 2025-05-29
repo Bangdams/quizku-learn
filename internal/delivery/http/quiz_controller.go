@@ -2,6 +2,7 @@ package http
 
 import (
 	"log"
+	"strings"
 
 	"github.com/Bangdams/quizku-learn/internal/model"
 	"github.com/Bangdams/quizku-learn/internal/usecase"
@@ -14,6 +15,7 @@ type QuizController interface {
 	Update(ctx *fiber.Ctx) error
 	Delete(ctx *fiber.Ctx) error
 	QuizDashboard(ctx *fiber.Ctx) error
+	FindByUserAndCourse(ctx *fiber.Ctx) error
 }
 
 type QuizControllerImpl struct {
@@ -24,6 +26,23 @@ func NewQuizController(userUsecase usecase.QuizUsecase) QuizController {
 	return &QuizControllerImpl{
 		QuizUsecase: userUsecase,
 	}
+}
+
+// FindByUserAndCourse implements QuizController.
+func (controller *QuizControllerImpl) FindByUserAndCourse(ctx *fiber.Ctx) error {
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userID := claims["user_id"].(float64)
+
+	courseCode := strings.ToUpper(ctx.Params("course_code"))
+
+	response, err := controller.QuizUsecase.FindByUserAndCourse(ctx.UserContext(), uint(userID), courseCode)
+	if err != nil {
+		log.Println("failed to create quiz")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponses[model.QuizStudentResponse]{Data: response})
 }
 
 func (controller *QuizControllerImpl) QuizDashboard(ctx *fiber.Ctx) error {

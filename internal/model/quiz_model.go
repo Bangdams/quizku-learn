@@ -12,6 +12,16 @@ type QuizResponse struct {
 	CreatedAt  time.Time `json:"created_at" validate:"required"`
 }
 
+type QuizStudentResponse struct {
+	ID            uint      `json:"id" validate:"required"`
+	LecturerName  string    `json:"lecturer_name" validate:"required"`
+	CourseName    string    `json:"course_name" validate:"required"`
+	QuestionName  string    `json:"question_name" validate:"required"`
+	Deadline      time.Time `json:"deadline" validate:"required"`
+	QuestionCount uint      `json:"question_count" validate:"required"`
+	Duration      uint      `json:"duration" validate:"required"`
+}
+
 type QuizDashboardResponse struct {
 	ID            uint      `json:"id" validate:"required"`
 	QuestionName  string    `json:"question_name" validate:"required"`
