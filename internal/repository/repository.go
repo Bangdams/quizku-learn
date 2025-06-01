@@ -10,7 +10,7 @@ func (r Repository[T]) Create(db *gorm.DB, entity *T) error {
 	return db.Create(entity).Error
 }
 
-func (r Repository[T]) CreateBacth(db *gorm.DB, entity *[]T) error {
+func (r Repository[T]) CreateBatch(db *gorm.DB, entity *[]T) error {
 	return db.Create(entity).Error
 }
 

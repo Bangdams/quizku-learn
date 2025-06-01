@@ -25,6 +25,9 @@ func Bootstrap(config *BootstrapConfig) {
 	lecturerTeachingRepo := repository.NewLecturerTeachingRepository()
 	questionRepo := repository.NewQuestionRepository()
 	quizRepo := repository.NewQuizRepository()
+	userAnswerRepo := repository.NewUserAnswerRepository()
+	quizResultRepo := repository.NewQuizResultRepository()
+	answerRepo := repository.NewAnswerRepository()
 
 	// usecase
 	userUsecase := usecase.NewUserUsecase(userRepo, refreshTokenRepo, classRepo, lecturerTeachingRepo, config.DB, config.Validate)
@@ -32,7 +35,8 @@ func Bootstrap(config *BootstrapConfig) {
 	classUsecase := usecase.NewClassUsecase(classRepo, courseRepo, config.DB, config.Validate)
 	lecturerTeachingUsecase := usecase.NewLecturerTeachingUsecase(lecturerTeachingRepo, classRepo, courseRepo, userRepo, config.DB, config.Validate)
 	questionUscase := usecase.NewQuestionUsecase(courseRepo, questionRepo, lecturerTeachingRepo, config.DB, config.Validate)
-	quizUsecase := usecase.NewQuizUsecase(quizRepo, classRepo, questionRepo, lecturerTeachingRepo, config.DB, config.Validate)
+	quizUsecase := usecase.NewQuizUsecase(quizResultRepo, answerRepo, userAnswerRepo, quizRepo, classRepo, questionRepo, lecturerTeachingRepo, config.DB, config.Validate)
+	userAnswerUsecase := usecase.NewUserAnswerUsecase(quizResultRepo, quizRepo, userAnswerRepo, config.DB, config.Validate)
 
 	// controller
 	userController := http.NewUserController(userUsecase)
@@ -41,6 +45,7 @@ func Bootstrap(config *BootstrapConfig) {
 	lecturerTeachingController := http.NewLecturerTeachingController(lecturerTeachingUsecase)
 	questionController := http.NewQuestionController(questionUscase)
 	quizController := http.NewQuizController(quizUsecase)
+	userAnswerController := http.NewUserAnswerController(userAnswerUsecase)
 
 	routeConfig := route.RouteConfig{
 		App:                        config.App,
@@ -50,6 +55,7 @@ func Bootstrap(config *BootstrapConfig) {
 		LecturerTeachingController: lecturerTeachingController,
 		QuestionController:         questionController,
 		QuizController:             quizController,
+		UserAnswerController:       userAnswerController,
 	}
 
 	routeConfig.Setup()

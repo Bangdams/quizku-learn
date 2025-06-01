@@ -26,7 +26,7 @@ func NewQuizRepository() QuizRepository {
 	return &QuizRepositoryImpl{}
 }
 
-// FindById implements QuizRepository.
+// FindByUserAndCourse implements QuizRepository.
 func (repository *QuizRepositoryImpl) FindByUserAndCourse(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint, courseCode string) error {
 
 	return tx.Joins("JOIN user_classes ON user_classes.class_id = quizzes.class_id").
@@ -41,7 +41,7 @@ func (repository *QuizRepositoryImpl) FindByUserAndCourse(tx *gorm.DB, quizzes *
 
 // FindById implements QuizRepository.
 func (repository *QuizRepositoryImpl) FindById(tx *gorm.DB, quiz *entity.Quiz) error {
-	return tx.First(quiz).Error
+	return tx.Preload("Question.QuestionDetails").First(quiz).Error
 }
 
 // QuizDashboardActive implements QuizRepository.

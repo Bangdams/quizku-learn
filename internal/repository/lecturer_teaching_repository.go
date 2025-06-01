@@ -6,7 +6,7 @@ import (
 )
 
 type LecturerTeachingRepository interface {
-	CreateBacth(tx *gorm.DB, lecturerTeachings *[]entity.LecturerTeaching) error
+	CreateBatch(tx *gorm.DB, lecturerTeachings *[]entity.LecturerTeaching) error
 	Delete(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
 	FindById(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error
 	OneDataCheck(tx *gorm.DB, lecturerTeaching *entity.LecturerTeaching) error

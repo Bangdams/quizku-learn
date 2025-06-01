@@ -23,9 +23,13 @@ type QuizUsecase interface {
 	Delete(ctx context.Context, quizId uint) error
 	QuizDashboard(ctx context.Context, userId uint, query string) (*[]model.QuizDashboardResponse, error)
 	FindByUserAndCourse(ctx context.Context, userId uint, courseCode string) (*[]model.QuizStudentResponse, error)
+	QuizStudentResult(ctx context.Context, userId uint, quizId uint) (*model.QuizStudentResultResponse, error)
 }
 
 type QuizUsecaseImpl struct {
+	QuizResultRepo       repository.QuizResultRepository
+	AnswerRepo           repository.AnswerRepository
+	UserAnswerRepo       repository.UserAnswerRepository
 	QuizRepo             repository.QuizRepository
 	ClassRepo            repository.ClassRepository
 	QuestionRepo         repository.QuestionRepository
@@ -34,8 +38,11 @@ type QuizUsecaseImpl struct {
 	Validate             *validator.Validate
 }
 
-func NewQuizUsecase(quizRepo repository.QuizRepository, classRepo repository.ClassRepository, questionRepo repository.QuestionRepository, LecturerTeachingRepo repository.LecturerTeachingRepository, DB *gorm.DB, validate *validator.Validate) QuizUsecase {
+func NewQuizUsecase(quizResultRepo repository.QuizResultRepository, answerRepo repository.AnswerRepository, userAnswerRepo repository.UserAnswerRepository, quizRepo repository.QuizRepository, classRepo repository.ClassRepository, questionRepo repository.QuestionRepository, LecturerTeachingRepo repository.LecturerTeachingRepository, DB *gorm.DB, validate *validator.Validate) QuizUsecase {
 	return &QuizUsecaseImpl{
+		QuizResultRepo:       quizResultRepo,
+		AnswerRepo:           answerRepo,
+		UserAnswerRepo:       userAnswerRepo,
 		QuizRepo:             quizRepo,
 		ClassRepo:            classRepo,
 		QuestionRepo:         questionRepo,
@@ -43,6 +50,99 @@ func NewQuizUsecase(quizRepo repository.QuizRepository, classRepo repository.Cla
 		DB:                   DB,
 		Validate:             validate,
 	}
+}
+
+// QuizStudentResult implements QuizUsecase.
+func (quizUsecase *QuizUsecaseImpl) QuizStudentResult(ctx context.Context, userId uint, quizId uint) (*model.QuizStudentResultResponse, error) {
+	tx := quizUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	errorResponse := &model.ErrorResponse{}
+
+	quiz := &entity.Quiz{
+		ID: quizId,
+	}
+
+	err := quizUsecase.QuizRepo.FindById(tx, quiz)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "quiz data was not found"
+			errorResponse.Details = []string{}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by id quiz : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error find by id quiz : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	err = quizUsecase.UserAnswerRepo.VerifyUserClassQuiz(tx, userId, quizId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "You do not have access to this quiz because it is not assigned to your class."
+			errorResponse.Details = []string{}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error verify user class : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error verify user class : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	userAnswers := []entity.UserAnswer{}
+	err = quizUsecase.UserAnswerRepo.GetUserAnswersByQuestion(tx, &userAnswers, quiz.QuestionId, userId)
+	if err != nil {
+		log.Println("failed when GetUserAnswersByQuestion : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	for i, element := range userAnswers {
+		questionDetailsId := element.Answer.QuestionDetail.ID
+		correctChoice := element.Answer.QuestionDetail.CorrectAnswer
+
+		answer := entity.Answer{}
+		err = quizUsecase.AnswerRepo.GetAnswersByQuestionDetail(tx, questionDetailsId, correctChoice, &answer)
+		if err != nil {
+			log.Println("failed when GetAnswersByQuestionDetail : ", err)
+			return nil, fiber.ErrInternalServerError
+		}
+
+		userAnswers[i].Answer.QuestionDetail.Answers = append(userAnswers[i].Answer.QuestionDetail.Answers, answer)
+	}
+
+	quizResult := entity.QuizzResult{}
+	err = quizUsecase.QuizResultRepo.FindByUserAndQuiz(tx, userId, quizId, &quizResult)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "quizz result data was not found"
+			errorResponse.Details = []string{}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by user and quiz : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error find by user and quiz : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success show quiz strudent result from usecase quiz")
+	return converter.QuizStudentResultToResponse(&userAnswers, &quizResult), nil
 }
 
 // FindByUserAndCourse implements QuizUsecase.

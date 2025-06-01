@@ -18,7 +18,9 @@ import (
 
 type QuestionUsecase interface {
 	Create(ctx context.Context, request *model.QuestionRequest) (*model.QuestionResponse, error)
+	Delete(ctx context.Context, questionId uint) error
 	FindByCourseCode(ctx context.Context, userId uint, courseCode string) (*[]model.QuestionResponse, error)
+	FindAll(ctx context.Context) (*[]model.QuestionWithCourseUserResponse, error)
 }
 
 type QuestionUsecaseImpl struct {
@@ -37,6 +39,70 @@ func NewQuestionUsecase(CourseRepo repository.CourseRepository, questionRepo rep
 		DB:                   DB,
 		Validate:             validate,
 	}
+}
+
+// Delete implements QuestionUsecase.
+func (questionUsecase *QuestionUsecaseImpl) Delete(ctx context.Context, questionId uint) error {
+	tx := questionUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	question := &entity.Question{}
+	question.ID = questionId
+
+	err := questionUsecase.QuestionRepo.FindById(tx, question)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse := model.ErrorResponse{
+				Message: "Question data was not found",
+				Details: []string{},
+			}
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error delete question : ", err)
+
+			return fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error delete question : ", err)
+		return fiber.ErrInternalServerError
+	}
+
+	err = questionUsecase.QuestionRepo.Delete(tx, question)
+	if err != nil {
+		log.Println("failed when delete repo question : ", err)
+		return fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return fiber.ErrInternalServerError
+	}
+
+	log.Println("success delete from usecase question")
+
+	return nil
+}
+
+// FindAll implements QuestionUsecase.
+func (questionUsecase *QuestionUsecaseImpl) FindAll(ctx context.Context) (*[]model.QuestionWithCourseUserResponse, error) {
+	tx := questionUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	var questions = &[]entity.Question{}
+	err := questionUsecase.QuestionRepo.FindAll(tx, questions)
+	if err != nil {
+		log.Println("failed when find all repo question : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success find all from usecase question")
+
+	return converter.QuestionWithCourseUserToResponses(questions), nil
 }
 
 // FindByCourseCode implements QuestionUsecase.
@@ -79,7 +145,7 @@ func (questionUsecase *QuestionUsecaseImpl) FindByCourseCode(ctx context.Context
 
 	err = questionUsecase.QuestionRepo.FindByCourseCode(tx, courseCode, questions)
 	if err != nil {
-		log.Println("failed when find all repo class : ", err)
+		log.Println("failed when FindByCourseCode repo question : ", err)
 		return nil, fiber.ErrInternalServerError
 	}
 
@@ -88,7 +154,7 @@ func (questionUsecase *QuestionUsecaseImpl) FindByCourseCode(ctx context.Context
 		return nil, fiber.ErrInternalServerError
 	}
 
-	log.Println("success find all from usecase class")
+	log.Println("success FindByCourseCode from usecase question")
 
 	return converter.QuestionToResponses(questions), nil
 }

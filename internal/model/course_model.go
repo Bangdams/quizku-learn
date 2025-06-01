@@ -16,7 +16,7 @@ type UserCourseListResponse struct {
 }
 
 type CourseRequest struct {
-	CourseCode string `json:"course_code" validate:"required"`
+	CourseCode string `json:"course_code" validate:"required,min=2,max=3"`
 	Name       string `json:"name" validate:"required"`
 }
 

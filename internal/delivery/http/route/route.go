@@ -14,6 +14,7 @@ type RouteConfig struct {
 	LecturerTeachingController http.LecturerTeachingController
 	QuestionController         http.QuestionController
 	QuizController             http.QuizController
+	UserAnswerController       http.UserAnswerController
 }
 
 func (config *RouteConfig) Setup() {
@@ -36,6 +37,10 @@ func (config *RouteConfig) Setup() {
 	admin.Post("/courses", config.CourseController.Create)
 	admin.Delete("/courses/:course_code", config.CourseController.Delete)
 	admin.Put("/courses", config.CourseController.Update)
+
+	// API for question
+	admin.Get("/questions", config.QuestionController.FindAll)
+	admin.Delete("/questions/:question_id", config.QuestionController.Delete)
 
 	// API for class
 	admin.Get("/classes", config.ClassController.FindAll)
@@ -77,10 +82,14 @@ func (config *RouteConfig) Setup() {
 	student := config.App.Group("/api-student", util.CheckLevel("mahasiswa"))
 
 	// API course
-	student.Get("/courses-by-user", util.CheckLevel("mahasiswa"), config.CourseController.ListCoursesByUser)
+	student.Get("/courses-by-user", config.CourseController.ListCoursesByUser)
 
 	// API quiz
-	student.Get("/quizzes/course/:course_code", util.CheckLevel("mahasiswa"), config.QuizController.FindByUserAndCourse)
+	student.Get("/quizzes/course/:course_code", config.QuizController.FindByUserAndCourse)
+	student.Get("/quizzes/:quiz_id/student/result", config.QuizController.QuizStudentResult)
+
+	// API user answer
+	student.Post("/quizzes/answer/:quiz_id", config.UserAnswerController.Create)
 
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)

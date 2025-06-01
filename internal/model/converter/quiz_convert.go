@@ -1,6 +1,7 @@
 package converter
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/Bangdams/quizku-learn/internal/entity"
@@ -19,6 +20,33 @@ func QuizStudentToResponse(quiz *entity.Quiz) *model.QuizStudentResponse {
 		QuestionCount: quiz.Question.QuestionCount,
 		Duration:      quiz.Question.Duration,
 	}
+}
+
+func QuizStudentResultToResponse(userAnswers *[]entity.UserAnswer, quizResult *entity.QuizzResult) *model.QuizStudentResultResponse {
+	log.Println("log from Quiz Student Result To Response")
+
+	response := model.QuizStudentResultResponse{}
+	answerDetail := model.AnswerUserDetail{}
+
+	response.Score = quizResult.Score
+	response.QuestionCount = quizResult.CorrectAnswerCount + quizResult.IncorrectAnswerCount
+	response.CountCorrectAnswer = quizResult.CorrectAnswerCount
+	response.CountIncorrectAnswer = quizResult.IncorrectAnswerCount
+
+	for _, userAnswer := range *userAnswers {
+		if userAnswer.Answer.Choice != userAnswer.Answer.QuestionDetail.CorrectAnswer {
+			answerDetail.QuestionText = userAnswer.Answer.QuestionDetail.QuestionText
+			answerDetail.IncorrectAnswer = fmt.Sprintf("%s. %s", userAnswer.Answer.Choice, userAnswer.Answer.Answer)
+
+			for _, element := range userAnswer.Answer.QuestionDetail.Answers {
+				answerDetail.CorrectAnswer = fmt.Sprintf("%s. %s", element.Choice, element.Answer)
+			}
+
+			response.AnswerUserDetails = append(response.AnswerUserDetails, answerDetail)
+		}
+	}
+
+	return &response
 }
 
 func QuizStudentToResponses(quizzes *[]entity.Quiz) *[]model.QuizStudentResponse {

@@ -251,7 +251,7 @@ func (lecturerTeachingUsecase *LecturerTeachingUsecaseImpl) Create(ctx context.C
 		}
 	}
 
-	err = lecturerTeachingUsecase.LecturerTeachingRepo.CreateBacth(tx, &lecturerTeachings)
+	err = lecturerTeachingUsecase.LecturerTeachingRepo.CreateBatch(tx, &lecturerTeachings)
 	if err != nil {
 		log.Println("failed when create repo lecturerTeaching : ", err)
 		return nil, fiber.ErrInternalServerError

@@ -13,6 +13,7 @@ type QuestionRepository interface {
 	FindById(tx *gorm.DB, question *entity.Question) error
 	FindByCourseAndId(tx *gorm.DB, question *entity.Question) error
 	FindByCourseCode(tx *gorm.DB, courseCode string, questions *[]entity.Question) error
+	FindAll(tx *gorm.DB, questions *[]entity.Question) error
 }
 
 type QuestionRepositoryImpl struct {
@@ -21,6 +22,11 @@ type QuestionRepositoryImpl struct {
 
 func NewQuestionRepository() QuestionRepository {
 	return &QuestionRepositoryImpl{}
+}
+
+// FindAll implements QuestionRepository.
+func (repository *QuestionRepositoryImpl) FindAll(tx *gorm.DB, questions *[]entity.Question) error {
+	return tx.Preload("User").Preload("Course").Find(questions).Error
 }
 
 // FindById implements QuestionRepository.

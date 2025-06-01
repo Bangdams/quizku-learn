@@ -7,6 +7,30 @@ import (
 	"github.com/Bangdams/quizku-learn/internal/model"
 )
 
+func QuestionWithCourseUserToResponse(question *entity.Question) *model.QuestionWithCourseUserResponse {
+	log.Println("log from question to response")
+
+	return &model.QuestionWithCourseUserResponse{
+		ID:           question.ID,
+		QuestionName: question.Name,
+		CourseName:   question.Course.Name,
+		LecturerName: question.User.Name,
+		CreatedAt:    question.CreatedAt,
+	}
+}
+
+func QuestionWithCourseUserToResponses(questions *[]entity.Question) *[]model.QuestionWithCourseUserResponse {
+	var questionResponses []model.QuestionWithCourseUserResponse
+
+	log.Println("log from question to responses")
+
+	for _, question := range *questions {
+		questionResponses = append(questionResponses, *QuestionWithCourseUserToResponse(&question))
+	}
+
+	return &questionResponses
+}
+
 func QuestionToResponse(question *entity.Question) *model.QuestionResponse {
 	log.Println("log from question to response")
 

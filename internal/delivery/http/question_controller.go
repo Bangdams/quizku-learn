@@ -11,7 +11,9 @@ import (
 
 type QuestionController interface {
 	Create(ctx *fiber.Ctx) error
+	Delete(ctx *fiber.Ctx) error
 	FindByCourseCode(ctx *fiber.Ctx) error
+	FindAll(ctx *fiber.Ctx) error
 }
 
 type QuestionControllerImpl struct {
@@ -22,6 +24,34 @@ func NewQuestionController(questionUsecase usecase.QuestionUsecase) QuestionCont
 	return &QuestionControllerImpl{
 		QuestionUsecase: questionUsecase,
 	}
+}
+
+// Delete implements QuestionController.
+func (controller *QuestionControllerImpl) Delete(ctx *fiber.Ctx) error {
+	questionId, err := ctx.ParamsInt("question_id")
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	if err := controller.QuestionUsecase.Delete(ctx.UserContext(), uint(questionId)); err != nil {
+		log.Println("failed to delete question")
+		return err
+	}
+
+	return nil
+}
+
+// FindAll implements QuestionController.
+func (controller *QuestionControllerImpl) FindAll(ctx *fiber.Ctx) error {
+	var responses *[]model.QuestionWithCourseUserResponse
+
+	responses, err := controller.QuestionUsecase.FindAll(ctx.UserContext())
+	if err != nil {
+		log.Println("failed to find all question")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponses[model.QuestionWithCourseUserResponse]{Data: responses})
 }
 
 // FindByCourseCode implements QuestionController.

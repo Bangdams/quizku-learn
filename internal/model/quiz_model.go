@@ -12,6 +12,20 @@ type QuizResponse struct {
 	CreatedAt  time.Time `json:"created_at" validate:"required"`
 }
 
+type QuizStudentResultResponse struct {
+	Score                uint               `json:"score" validate:"required"`
+	QuestionCount        uint               `json:"question_count" validate:"required"`
+	CountCorrectAnswer   uint               `json:"count_correct_answer" validate:"required"`
+	CountIncorrectAnswer uint               `json:"count_incorrect_answer" validate:"required"`
+	AnswerUserDetails    []AnswerUserDetail `json:"incorrect_answer_detail" validate:"required"`
+}
+
+type AnswerUserDetail struct {
+	QuestionText    string `json:"question_text" validate:"required"`
+	CorrectAnswer   string `json:"correct_answer" validate:"required"`
+	IncorrectAnswer string `json:"incorrect_answer" validate:"required"`
+}
+
 type QuizStudentResponse struct {
 	ID            uint      `json:"id" validate:"required"`
 	LecturerName  string    `json:"lecturer_name" validate:"required"`

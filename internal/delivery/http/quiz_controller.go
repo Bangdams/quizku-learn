@@ -16,6 +16,7 @@ type QuizController interface {
 	Delete(ctx *fiber.Ctx) error
 	QuizDashboard(ctx *fiber.Ctx) error
 	FindByUserAndCourse(ctx *fiber.Ctx) error
+	QuizStudentResult(ctx *fiber.Ctx) error
 }
 
 type QuizControllerImpl struct {
@@ -26,6 +27,26 @@ func NewQuizController(userUsecase usecase.QuizUsecase) QuizController {
 	return &QuizControllerImpl{
 		QuizUsecase: userUsecase,
 	}
+}
+
+// QuizStudentResult implements QuizController.
+func (controller *QuizControllerImpl) QuizStudentResult(ctx *fiber.Ctx) error {
+	quizId, err := ctx.ParamsInt("quiz_id")
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userID := claims["user_id"].(float64)
+
+	response, err := controller.QuizUsecase.QuizStudentResult(ctx.UserContext(), uint(userID), uint(quizId))
+	if err != nil {
+		log.Println("failed to show QuizStudentResult")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.QuizStudentResultResponse]{Data: response})
 }
 
 // FindByUserAndCourse implements QuizController.
