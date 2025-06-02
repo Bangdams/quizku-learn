@@ -60,6 +60,9 @@ func (config *RouteConfig) Setup() {
 	// display Lecturer Teaching for insert
 	admin.Get("/lecturer-teachings", config.LecturerTeachingController.DisplayData)
 
+	// APi for quizz
+	admin.Get("/quizzes/:quiz_id/results/analysis", config.QuizController.QuizResultAnalysis)
+
 	// API DOSEN
 	lecturer := config.App.Group("/api-lecturer", util.CheckLevel("dosen"))
 

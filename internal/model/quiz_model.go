@@ -20,6 +20,34 @@ type QuizStudentResultResponse struct {
 	AnswerUserDetails    []AnswerUserDetail `json:"incorrect_answer_detail" validate:"required"`
 }
 
+type ScoreResult struct {
+	Score int
+	Type  string
+}
+
+type QuizResultAnalysisResponse struct {
+	AvarageScore        uint                        `json:"avarage_score" validate:"required"`
+	HighestScore        uint                        `json:"highest_score" validate:"required"`
+	LowestScore         uint                        `json:"lowest_score" validate:"required"`
+	CompletionRate      uint                        `json:"completion_rate" validate:"required"`
+	StudentCount        uint                        `json:"student_count" validate:"required"`
+	UserCompleteCount   uint                        `json:"user_complete_count" validate:"required"`
+	UserIncompleteCount uint                        `json:"user_incomplete_count" validate:"required"`
+	CoursesName         string                      `json:"course_name" validate:"required"`
+	QuizName            string                      `json:"quiz_name" validate:"required"`
+	QuestionCount       uint                        `json:"question_count" validate:"required"`
+	CreatedAt           time.Time                   `json:"created_at" validate:"required"`
+	Students            []QuizResultAnalysisStudent `json:"students" validate:"required"`
+}
+
+type QuizResultAnalysisStudent struct {
+	Name      string `json:"name" validate:"required"`
+	Email     string `json:"email" validate:"required"`
+	ClassName string `json:"class_name" validate:"required"`
+	Score     uint   `json:"score" validate:"required"`
+	Status    string `json:"status" validate:"required"`
+}
+
 type AnswerUserDetail struct {
 	QuestionText    string `json:"question_text" validate:"required"`
 	CorrectAnswer   string `json:"correct_answer" validate:"required"`
