@@ -12,6 +12,24 @@ type QuizResponse struct {
 	CreatedAt  time.Time `json:"created_at" validate:"required"`
 }
 
+type QuizHistoryStudentResponse struct {
+	ID         uint      `json:"id" validate:"required"`
+	QuizName   string    `json:"quiz_name" validate:"required"`
+	CourseName string    `json:"course_name" validate:"required"`
+	CreatedAt  time.Time `json:"created_at" validate:"required"`
+	Score      uint      `json:"score" validate:"required"`
+	Status     string    `json:"status" validate:"required"`
+}
+
+type QuizHistoryResponse struct {
+	ID            uint      `json:"id" validate:"required"`
+	CourseName    string    `json:"course_name" validate:"required"`
+	QuizName      string    `json:"quiz_name" validate:"required"`
+	StudentCount  uint      `json:"student_count" validate:"required"`
+	QuestionCount uint      `json:"question_count" validate:"required"`
+	CreatedAt     time.Time `json:"created_at" validate:"required"`
+}
+
 type QuizStudentResultResponse struct {
 	Score                uint               `json:"score" validate:"required"`
 	QuestionCount        uint               `json:"question_count" validate:"required"`

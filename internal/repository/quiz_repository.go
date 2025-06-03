@@ -16,6 +16,7 @@ type QuizRepository interface {
 	QuizDashboardActive(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	QuizDashboardArchived(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	FindByUserAndCourse(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint, courseCode string) error
+	FindAll(tx *gorm.DB, quizzes *[]entity.Quiz) error
 }
 
 type QuizRepositoryImpl struct {
@@ -24,6 +25,14 @@ type QuizRepositoryImpl struct {
 
 func NewQuizRepository() QuizRepository {
 	return &QuizRepositoryImpl{}
+}
+
+// FindAll implements QuizRepository.
+func (repository *QuizRepositoryImpl) FindAll(tx *gorm.DB, quizzes *[]entity.Quiz) error {
+	return tx.Preload("Course").
+		Preload("Question").
+		Preload("Class.UserClasses").
+		Find(quizzes).Error
 }
 
 // FindByUserAndCourse implements QuizRepository.

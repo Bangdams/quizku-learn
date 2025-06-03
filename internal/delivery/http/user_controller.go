@@ -3,11 +3,13 @@ package http
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/Bangdams/quizku-learn/internal/model"
 	"github.com/Bangdams/quizku-learn/internal/usecase"
+	"github.com/Bangdams/quizku-learn/internal/util"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -86,6 +88,48 @@ func (controller *UserControllerImpl) Create(ctx *fiber.Ctx) error {
 		log.Println("failed to parse request : ", err)
 		return fiber.ErrBadRequest
 	}
+
+	request.Name = ctx.FormValue("name")
+	request.Email = ctx.FormValue("email")
+	request.Password = ctx.FormValue("password")
+	request.Role = ctx.FormValue("role")
+
+	if ctx.FormValue("class_id") != "" {
+		classId, err := strconv.Atoi(ctx.FormValue("class_id"))
+		if err != nil {
+			log.Println(classId)
+			log.Println("error badrequest")
+			return fiber.ErrBadRequest
+		}
+
+		request.ClassId = uint(classId)
+	} else {
+		request.ClassId = 0
+	}
+
+	// upload image
+	file, err := ctx.FormFile("image")
+	if file != nil {
+		if err != nil {
+			log.Println("failed to parse request image : ", err)
+			return fiber.ErrBadRequest
+		}
+
+		filename := filepath.Base(file.Filename)
+		generateFilename := util.GenerateRandomFilename(filename)
+		savePath := filepath.Join("./upload", generateFilename)
+
+		if err := ctx.SaveFile(file, savePath); err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save image"})
+		}
+
+		request.Image = generateFilename
+
+		log.Println("tidak ada")
+	} else {
+		request.Image = "default.png"
+	}
+	// end upload image
 
 	response, err := controller.UserUsecase.Create(ctx.UserContext(), request)
 	if err != nil {

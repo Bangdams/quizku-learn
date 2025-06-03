@@ -12,6 +12,7 @@ type QuizResultRepository interface {
 	Create(tx *gorm.DB, quizResult *entity.QuizzResult) error
 	FindByUserAndQuiz(tx *gorm.DB, userId uint, quizId uint, quizResult *entity.QuizzResult) error
 	QuizResultAnalysis(tx *gorm.DB, quizId uint, quizResult *[]entity.QuizzResult) (model.QuizResultAnalysisResponse, error)
+	GetQuizHistoryForStudent(tx *gorm.DB, userId uint, quizResults *[]entity.QuizzResult) error
 }
 
 type QuizResultRepositoryImpl struct {
@@ -20,6 +21,13 @@ type QuizResultRepositoryImpl struct {
 
 func NewQuizResultRepository() QuizResultRepository {
 	return &QuizResultRepositoryImpl{}
+}
+
+// GetQuizHistoryForStudent implements QuizResultRepository.
+func (repository *QuizResultRepositoryImpl) GetQuizHistoryForStudent(tx *gorm.DB, userId uint, quizResults *[]entity.QuizzResult) error {
+	return tx.Preload("Quiz.Question.Course").
+		Where("quizz_results.user_id = ?", userId).
+		Find(quizResults).Error
 }
 
 // QuizResultAnalysis implements QuizResultRepository.
@@ -39,7 +47,7 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 	err := tx.Table("quizzes").
 		Select("COUNT(*) AS user_count").
 		Joins("JOIN user_classes ON quizzes.class_id = user_classes.class_id").
-		Where("quizzes.id = ?", 1).
+		Where("quizzes.id = ?", quizId).
 		Scan(&userCount).Error
 	if err != nil {
 		return model.QuizResultAnalysisResponse{}, err
@@ -51,7 +59,7 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
     UNION
     SELECT score, 'min_score' AS type FROM 
     (SELECT score FROM quizz_results WHERE quizz_id = ? ORDER BY score ASC LIMIT 1) AS min_score;
-	`, 1, 1).Scan(&scoreMinMax).Error
+	`, quizId, quizId).Scan(&scoreMinMax).Error
 	if err != nil {
 		return model.QuizResultAnalysisResponse{}, err
 	}
@@ -59,7 +67,7 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 	err = tx.Preload("Quiz.Question").
 		Preload("Quiz.Course").
 		Preload("User.UserClass.Class").
-		Where("quizz_results.quizz_id = ?", 1).
+		Where("quizz_results.quizz_id = ?", quizId).
 		Find(&quizResult).Error
 	if err != nil {
 		return model.QuizResultAnalysisResponse{}, err

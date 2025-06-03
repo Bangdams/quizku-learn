@@ -18,6 +18,8 @@ type QuizController interface {
 	FindByUserAndCourse(ctx *fiber.Ctx) error
 	QuizStudentResult(ctx *fiber.Ctx) error
 	QuizResultAnalysis(ctx *fiber.Ctx) error
+	FindAll(ctx *fiber.Ctx) error
+	GetQuizHistoryForStudent(ctx *fiber.Ctx) error
 }
 
 type QuizControllerImpl struct {
@@ -30,6 +32,32 @@ func NewQuizController(userUsecase usecase.QuizUsecase) QuizController {
 	}
 }
 
+// GetQuizHistoryForStudent implements QuizController.
+func (controller *QuizControllerImpl) GetQuizHistoryForStudent(ctx *fiber.Ctx) error {
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userID := claims["user_id"].(float64)
+
+	responses, err := controller.QuizUsecase.GetQuizHistoryForStudent(ctx.UserContext(), uint(userID))
+	if err != nil {
+		log.Println("failed to GetQuizHistoryForStudent")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponses[model.QuizHistoryStudentResponse]{Data: responses})
+}
+
+// FindAll implements QuizController.
+func (controller *QuizControllerImpl) FindAll(ctx *fiber.Ctx) error {
+	response, err := controller.QuizUsecase.FindAll(ctx.UserContext())
+	if err != nil {
+		log.Println("failed to show Find All")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponses[model.QuizHistoryResponse]{Data: response})
+}
+
 // QuizResultAnalysis implements QuizController.
 func (controller *QuizControllerImpl) QuizResultAnalysis(ctx *fiber.Ctx) error {
 	quizId, err := ctx.ParamsInt("quiz_id")
@@ -39,7 +67,7 @@ func (controller *QuizControllerImpl) QuizResultAnalysis(ctx *fiber.Ctx) error {
 
 	response, err := controller.QuizUsecase.QuizResultAnalysis(ctx.UserContext(), uint(quizId))
 	if err != nil {
-		log.Println("failed to show QuizStudentResult")
+		log.Println("failed to show QuizResultAnalysis")
 		return err
 	}
 

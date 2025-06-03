@@ -22,6 +22,56 @@ func QuizStudentToResponse(quiz *entity.Quiz) *model.QuizStudentResponse {
 	}
 }
 
+func QuizHistoryStudentToResponse(quizResult *entity.QuizzResult) *model.QuizHistoryStudentResponse {
+	log.Println("log from QuizHistoryToResponse")
+
+	return &model.QuizHistoryStudentResponse{
+		ID:         quizResult.QuizzId,
+		QuizName:   quizResult.Quiz.Question.Name,
+		CourseName: quizResult.Quiz.Course.Name,
+		Score:      quizResult.Score,
+		Status:     quizResult.Status,
+		CreatedAt:  quizResult.CreatedAt,
+	}
+}
+
+func QuizHistoryStudentToResponses(quizResults *[]entity.QuizzResult) *[]model.QuizHistoryStudentResponse {
+	var quizHistoryResponses []model.QuizHistoryStudentResponse
+
+	log.Println("log from QuizHistoryStudentToResponses")
+
+	for _, quiz := range *quizResults {
+		quizHistoryResponses = append(quizHistoryResponses, *QuizHistoryStudentToResponse(&quiz))
+	}
+
+	return &quizHistoryResponses
+}
+
+func QuizHistoryToResponse(quiz *entity.Quiz) *model.QuizHistoryResponse {
+	log.Println("log from QuizHistoryToResponse")
+
+	return &model.QuizHistoryResponse{
+		ID:            quiz.ID,
+		CourseName:    quiz.Course.Name,
+		QuizName:      quiz.Question.Name,
+		QuestionCount: quiz.Question.QuestionCount,
+		StudentCount:  uint(len(quiz.Class.UserClasses)),
+		CreatedAt:     quiz.CreatedAt,
+	}
+}
+
+func QuizHistoryToResponses(quizzes *[]entity.Quiz) *[]model.QuizHistoryResponse {
+	var quizHistoryResponses []model.QuizHistoryResponse
+
+	log.Println("log from QuizHistoryToResponses")
+
+	for _, quiz := range *quizzes {
+		quizHistoryResponses = append(quizHistoryResponses, *QuizHistoryToResponse(&quiz))
+	}
+
+	return &quizHistoryResponses
+}
+
 func QuizStudentResultToResponse(userAnswers *[]entity.UserAnswer, quizResult *entity.QuizzResult) *model.QuizStudentResultResponse {
 	log.Println("log from Quiz Student Result To Response")
 

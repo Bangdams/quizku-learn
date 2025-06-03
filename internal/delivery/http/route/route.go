@@ -1,6 +1,8 @@
 package route
 
 import (
+	"path/filepath"
+
 	"github.com/Bangdams/quizku-learn/internal/delivery/http"
 	"github.com/Bangdams/quizku-learn/internal/util"
 	"github.com/gofiber/fiber/v2"
@@ -62,6 +64,7 @@ func (config *RouteConfig) Setup() {
 
 	// APi for quizz
 	admin.Get("/quizzes/:quiz_id/results/analysis", config.QuizController.QuizResultAnalysis)
+	admin.Get("/quizzes/history", config.QuizController.FindAll)
 
 	// API DOSEN
 	lecturer := config.App.Group("/api-lecturer", util.CheckLevel("dosen"))
@@ -89,10 +92,18 @@ func (config *RouteConfig) Setup() {
 
 	// API quiz
 	student.Get("/quizzes/course/:course_code", config.QuizController.FindByUserAndCourse)
-	student.Get("/quizzes/:quiz_id/student/result", config.QuizController.QuizStudentResult)
+	student.Get("/quizzes/:quiz_id/result", config.QuizController.QuizStudentResult)
+	student.Get("/quizzes/history", config.QuizController.GetQuizHistoryForStudent)
 
 	// API user answer
 	student.Post("/quizzes/answer/:quiz_id", config.UserAnswerController.Create)
+
+	// API for image
+	config.App.Get("/assets/image/:filename", func(ctx *fiber.Ctx) error {
+		filename := ctx.Params("filename")
+		filepath := filepath.Join("./upload", filename)
+		return ctx.SendFile(filepath)
+	})
 
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)
