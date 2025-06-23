@@ -190,6 +190,7 @@ func (userUsecase *UserUsecaseImpl) Refresh(ctx context.Context, refreshToken st
 		Name:  claims["name"].(string),
 		Email: claims["email"].(string),
 		Role:  claims["role"].(string),
+		Image: claims["image"].(string),
 	}
 
 	if err := userUsecase.RefreshTokenRepo.CheckStatusLogout(tx, uint(userId)); err != nil {

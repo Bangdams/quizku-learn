@@ -70,7 +70,7 @@ func (courseUsecase *CourseUsecaseImpl) ListCoursesByUserWithClass(ctx context.C
 	tx := courseUsecase.DB.WithContext(ctx).Begin()
 	defer tx.Rollback()
 
-	courses, totalStudents, err := courseUsecase.CourseRepo.ListCoursesByUserWithClass(tx, userId)
+	courses, totalStudents, totalQuiz, err := courseUsecase.CourseRepo.ListCoursesByUserWithClass(tx, userId)
 	if err != nil {
 		log.Println("error get list courses by user with class : ", err)
 		return nil, fiber.ErrInternalServerError
@@ -83,7 +83,7 @@ func (courseUsecase *CourseUsecaseImpl) ListCoursesByUserWithClass(ctx context.C
 
 	log.Println("success get list courses by user from course usecase")
 
-	return converter.UserCourseListToResponse(&courses, &totalStudents), nil
+	return converter.UserCourseListToResponse(&courses, &totalStudents, &totalQuiz), nil
 }
 
 // FindByCourseCode implements CourseUsecase.
@@ -268,6 +268,8 @@ func (courseUsecase *CourseUsecaseImpl) Update(ctx context.Context, request *mod
 	course := &entity.Course{
 		CourseCode: request.OldCourseCode,
 	}
+
+	log.Println(course.CourseCode)
 
 	err = courseUsecase.CourseRepo.FindByCourseCode(tx, course)
 	if err != nil {

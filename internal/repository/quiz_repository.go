@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Bangdams/quizku-learn/internal/entity"
+	"github.com/Bangdams/quizku-learn/internal/model"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,7 @@ type QuizRepository interface {
 	QuizDashboardArchived(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint) error
 	FindByUserAndCourse(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint, courseCode string) error
 	FindAll(tx *gorm.DB, quizzes *[]entity.Quiz) error
+	StartQuiz(tx *gorm.DB, response *model.StartQuizResponse, quizId uint) error
 }
 
 type QuizRepositoryImpl struct {
@@ -25,6 +27,52 @@ type QuizRepositoryImpl struct {
 
 func NewQuizRepository() QuizRepository {
 	return &QuizRepositoryImpl{}
+}
+
+// StartQuiz implements QuizRepository.
+func (repository *QuizRepositoryImpl) StartQuiz(tx *gorm.DB, response *model.StartQuizResponse, quizId uint) error {
+	quiz := &entity.Quiz{}
+	err := tx.Preload("Course").
+		Preload("Question.User").
+		Where("quizzes.id = ?", quizId).
+		First(quiz).Error
+	if err != nil {
+		return err
+	}
+
+	response.CourseName = quiz.Course.Name
+	response.CourseCode = quiz.Course.CourseCode
+	response.QuizName = quiz.Question.Name
+	response.LecturerName = quiz.Question.User.Name
+	response.Duration = quiz.Question.Duration
+	response.QuestionCount = quiz.Question.QuestionCount
+
+	questionDetails := &[]entity.QuestionDetail{}
+	err = tx.
+		Preload("Answers").
+		Where("question_details.question_id = ?", quiz.Question.ID).
+		Find(questionDetails).Error
+	if err != nil {
+		return err
+	}
+
+	for _, data := range *questionDetails {
+		choiceItems := []model.ChoiceItem{}
+
+		for _, choiceItem := range data.Answers {
+			choiceItems = append(choiceItems, model.ChoiceItem{
+				Choice: choiceItem.Choice,
+				Answer: choiceItem.Answer,
+			})
+		}
+
+		response.QuestionItems = append(response.QuestionItems, model.QuestionItem{
+			QuestionText: data.QuestionText,
+			ChoiceItems:  choiceItems,
+		})
+	}
+
+	return nil
 }
 
 // FindAll implements QuizRepository.
@@ -42,10 +90,12 @@ func (repository *QuizRepositoryImpl) FindByUserAndCourse(tx *gorm.DB, quizzes *
 		Joins("JOIN courses ON quizzes.course_code = courses.course_code").
 		Joins("JOIN questions ON quizzes.question_id = questions.id").
 		Where("user_classes.user_id = ? AND courses.course_code = ?", userId, courseCode).
+		Where("quizzes.deadline > NOW()").
 		Preload("Class.UserClasses").
 		Preload("Course").
 		Preload("Question.User").
 		Find(&quizzes).Error
+
 }
 
 // FindById implements QuizRepository.
@@ -90,6 +140,7 @@ func (repository *QuizRepositoryImpl) QuizDashboardActive(tx *gorm.DB, quizzes *
 		Preload("Class.UserClasses").
 		Where(query, values...).
 		Where("deadline >= CURRENT_DATE").
+		Order("deadline desc").
 		Find(&quizzes).Error
 }
 
@@ -130,6 +181,7 @@ func (repository *QuizRepositoryImpl) QuizDashboardArchived(tx *gorm.DB, quizzes
 		Preload("Class.UserClasses").
 		Where(query, values...).
 		Where("deadline < CURRENT_DATE").
+		Order("deadline desc").
 		Find(&quizzes).Error
 }
 
@@ -169,5 +221,6 @@ func (repository *QuizRepositoryImpl) QuizDashboard(tx *gorm.DB, quizzes *[]enti
 		Preload("Question").
 		Preload("Class.UserClasses").
 		Where(query, values...).
+		Order("deadline desc").
 		Find(&quizzes).Error
 }

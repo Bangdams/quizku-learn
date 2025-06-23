@@ -27,6 +27,7 @@ type QuizUsecase interface {
 	QuizResultAnalysis(ctx context.Context, quizId uint) (*model.QuizResultAnalysisResponse, error)
 	FindAll(ctx context.Context) (*[]model.QuizHistoryResponse, error)
 	GetQuizHistoryForStudent(ctx context.Context, userId uint) (*[]model.QuizHistoryStudentResponse, error)
+	StartQuiz(ctx context.Context, quizId uint) (*model.StartQuizResponse, error)
 }
 
 type QuizUsecaseImpl struct {
@@ -53,6 +54,40 @@ func NewQuizUsecase(quizResultRepo repository.QuizResultRepository, answerRepo r
 		DB:                   DB,
 		Validate:             validate,
 	}
+}
+
+// StartQuiz implements QuizUsecase.
+func (quizUsecase *QuizUsecaseImpl) StartQuiz(ctx context.Context, quizId uint) (*model.StartQuizResponse, error) {
+	tx := quizUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	errorResponse := &model.ErrorResponse{}
+
+	startQuizResponse := &model.StartQuizResponse{}
+
+	err := quizUsecase.QuizRepo.StartQuiz(tx, startQuizResponse, quizId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "quiz data was not found"
+			errorResponse.Details = []string{}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			log.Println("error find by id quiz : ", err)
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error find by id quiz : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	return startQuizResponse, nil
 }
 
 // GetQuizHistoryForStudent implements QuizUsecase.

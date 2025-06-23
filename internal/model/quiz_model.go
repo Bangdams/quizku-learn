@@ -13,12 +13,12 @@ type QuizResponse struct {
 }
 
 type QuizHistoryStudentResponse struct {
-	ID         uint      `json:"id" validate:"required"`
-	QuizName   string    `json:"quiz_name" validate:"required"`
-	CourseName string    `json:"course_name" validate:"required"`
-	CreatedAt  time.Time `json:"created_at" validate:"required"`
-	Score      uint      `json:"score" validate:"required"`
-	Status     string    `json:"status" validate:"required"`
+	ID         uint   `json:"id" validate:"required"`
+	QuizName   string `json:"quiz_name" validate:"required"`
+	CourseName string `json:"course_name" validate:"required"`
+	CreatedAt  string `json:"created_at" validate:"required"`
+	Score      uint   `json:"score" validate:"required"`
+	Status     string `json:"status" validate:"required"`
 }
 
 type QuizHistoryResponse struct {
@@ -54,7 +54,8 @@ type QuizResultAnalysisResponse struct {
 	CoursesName         string                      `json:"course_name" validate:"required"`
 	QuizName            string                      `json:"quiz_name" validate:"required"`
 	QuestionCount       uint                        `json:"question_count" validate:"required"`
-	CreatedAt           time.Time                   `json:"created_at" validate:"required"`
+	CreatedAt           string                      `json:"created_at" validate:"required"`
+	Duration            uint                        `json:"duration" validate:"required"`
 	Students            []QuizResultAnalysisStudent `json:"students" validate:"required"`
 }
 
@@ -73,13 +74,13 @@ type AnswerUserDetail struct {
 }
 
 type QuizStudentResponse struct {
-	ID            uint      `json:"id" validate:"required"`
-	LecturerName  string    `json:"lecturer_name" validate:"required"`
-	CourseName    string    `json:"course_name" validate:"required"`
-	QuestionName  string    `json:"question_name" validate:"required"`
-	Deadline      time.Time `json:"deadline" validate:"required"`
-	QuestionCount uint      `json:"question_count" validate:"required"`
-	Duration      uint      `json:"duration" validate:"required"`
+	ID            uint   `json:"id" validate:"required"`
+	LecturerName  string `json:"lecturer_name" validate:"required"`
+	CourseName    string `json:"course_name" validate:"required"`
+	QuestionName  string `json:"question_name" validate:"required"`
+	Deadline      string `json:"deadline" validate:"required"`
+	QuestionCount uint   `json:"question_count" validate:"required"`
+	Duration      uint   `json:"duration" validate:"required"`
 }
 
 type QuizDashboardResponse struct {
@@ -88,6 +89,7 @@ type QuizDashboardResponse struct {
 	CourseName    string    `json:"course_name" validate:"required"`
 	QuestionCount uint      `json:"question_count" validate:"required"`
 	StudentCount  int       `json:"student_count" validate:"required"`
+	Deadline      time.Time `json:"deadline" validate:"required"`
 	CreatedAt     time.Time `json:"created_at" validate:"required"`
 }
 
@@ -96,4 +98,24 @@ type QuizRequest struct {
 	ClassId    uint   `json:"class_id" validate:"required"`
 	QuestionId uint   `json:"question_id" validate:"required"`
 	Deadline   string `json:"deadline" validate:"required"`
+}
+
+type StartQuizResponse struct {
+	CourseName    string         `json:"course_name" validate:"required"`
+	CourseCode    string         `json:"course_code" validate:"required"`
+	QuizName      string         `json:"quiz_name" validate:"required"`
+	LecturerName  string         `json:"lecturer_name" validate:"required"`
+	Duration      uint           `json:"duration" validate:"required"`
+	QuestionCount uint           `json:"question_count" validate:"required"`
+	QuestionItems []QuestionItem `json:"question_items" validate:"required"`
+}
+
+type QuestionItem struct {
+	QuestionText string       `json:"question_text" validate:"required"`
+	ChoiceItems  []ChoiceItem `json:"choice_items" validate:"required"`
+}
+
+type ChoiceItem struct {
+	Choice string `json:"choice" validate:"required"`
+	Answer string `json:"answer" validate:"required"`
 }

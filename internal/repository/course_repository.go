@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"log"
+
 	"github.com/Bangdams/quizku-learn/internal/entity"
 	"gorm.io/gorm"
 )
@@ -14,7 +16,7 @@ type CourseRepository interface {
 	FindAllByCourseCode(tx *gorm.DB, courseCode []string, courses *[]entity.Course) error
 	FindByIdWithClass(tx *gorm.DB, courses *[]entity.Course, classId []uint) error
 	FindWithClassSubject(tx *gorm.DB, count *int64, courseCode string, classId uint) error
-	ListCoursesByUserWithClass(tx *gorm.DB, userId uint) ([]entity.Course, []uint, error)
+	ListCoursesByUserWithClass(tx *gorm.DB, userId uint) ([]entity.Course, []uint, []uint, error)
 	ListCoursesByUser(tx *gorm.DB, courses *[]entity.Course, userId uint) error
 }
 
@@ -47,17 +49,19 @@ func (repository *CourseRepositoryImpl) FindWithClassSubject(tx *gorm.DB, count 
 // FindByIdWithClass implements ClassRepository.
 func (repository *CourseRepositoryImpl) FindByIdWithClass(tx *gorm.DB, courses *[]entity.Course, classId []uint) error {
 	return tx.Preload("Classes", "id IN ?", classId).Find(courses).Error
+	// return tx.Preload("Classes", "id NOT IN (SELECT id FROM lecturer_teachings WHERE class_id IN ?)", classId).
+	// 	Find(&courses).Error
 }
 
 // ListCoursesByUserWithClass implements ClassRepository.
-func (repository *CourseRepositoryImpl) ListCoursesByUserWithClass(tx *gorm.DB, userId uint) ([]entity.Course, []uint, error) {
+func (repository *CourseRepositoryImpl) ListCoursesByUserWithClass(tx *gorm.DB, userId uint) ([]entity.Course, []uint, []uint, error) {
 	var lecturerTeachings []entity.LecturerTeaching
 	err := tx.Preload("Class").Preload("Course").
 		Where("user_id = ?", userId).
 		Find(&lecturerTeachings).Error
 
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	courseMap := make(map[string]*entity.Course)
@@ -71,23 +75,32 @@ func (repository *CourseRepositoryImpl) ListCoursesByUserWithClass(tx *gorm.DB, 
 
 	var studentCount int64
 	var totalStudents []uint
+	var quizCount int64
+	var totalQuiz []uint
 	var courses []entity.Course
 
 	for _, course := range courseMap {
+		log.Println(course)
 		// student count
 		for _, class := range course.Classes {
 			var count int64
 			tx.Model(&entity.UserClass{}).Where("class_id = ?", class.ID).Count(&count)
 			studentCount += count
+
+			var qCount int64
+			tx.Model(&entity.Quiz{}).Where("class_id = ?", class.ID).Where("course_code = ?", course.CourseCode).Count(&qCount)
+			quizCount += qCount
 		}
 
 		totalStudents = append(totalStudents, uint(studentCount))
+		totalQuiz = append(totalQuiz, uint(quizCount))
 		courses = append(courses, *course)
 
 		studentCount = 0
+		quizCount = 0
 	}
 
-	return courses, totalStudents, nil
+	return courses, totalStudents, totalQuiz, nil
 }
 
 // FindAllByCourseCode implements CourseRepository.

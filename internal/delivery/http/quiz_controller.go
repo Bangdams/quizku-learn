@@ -20,6 +20,7 @@ type QuizController interface {
 	QuizResultAnalysis(ctx *fiber.Ctx) error
 	FindAll(ctx *fiber.Ctx) error
 	GetQuizHistoryForStudent(ctx *fiber.Ctx) error
+	StartQuiz(ctx *fiber.Ctx) error
 }
 
 type QuizControllerImpl struct {
@@ -30,6 +31,26 @@ func NewQuizController(userUsecase usecase.QuizUsecase) QuizController {
 	return &QuizControllerImpl{
 		QuizUsecase: userUsecase,
 	}
+}
+
+// StartQuiz implements QuizController.
+func (controller *QuizControllerImpl) StartQuiz(ctx *fiber.Ctx) error {
+	// userToken := ctx.Locals("user").(*jwt.Token)
+	// claims := userToken.Claims.(jwt.MapClaims)
+	// userID := claims["user_id"].(float64)
+
+	quizId, err := ctx.ParamsInt("quiz_id")
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	responses, err := controller.QuizUsecase.StartQuiz(ctx.UserContext(), uint(quizId))
+	if err != nil {
+		log.Println("failed to StartQuiz")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.StartQuizResponse]{Data: responses})
 }
 
 // GetQuizHistoryForStudent implements QuizController.

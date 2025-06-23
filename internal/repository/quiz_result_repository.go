@@ -42,6 +42,7 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 	var courseName string
 	var questionName string
 	var questionCount uint
+	var duration uint
 	var CreatedAt time.Time
 
 	err := tx.Table("quizzes").
@@ -73,6 +74,10 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 		return model.QuizResultAnalysisResponse{}, err
 	}
 
+	if len(*quizResult) == 0 {
+		return model.QuizResultAnalysisResponse{}, gorm.ErrRecordNotFound
+	}
+
 	students := []model.QuizResultAnalysisStudent{}
 	student := model.QuizResultAnalysisStudent{}
 
@@ -86,6 +91,7 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 
 		courseName = element.Quiz.Course.Name
 		questionName = element.Quiz.Question.Name
+		duration = element.Quiz.Question.Duration
 		questionCount = element.Quiz.Question.QuestionCount
 		CreatedAt = element.Quiz.CreatedAt
 		totalScore += int64(element.Score)
@@ -94,7 +100,7 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 	userCompleteCount = int64(len(*quizResult))
 	userIncompleteCount = userCount - userCompleteCount
 	completionRate = int64((float64(userCompleteCount) / float64(userCount)) * 100)
-	avarageScore = totalScore / userCompleteCount
+	avarageScore = int64(float64(totalScore) / float64(userCompleteCount))
 
 	response := model.QuizResultAnalysisResponse{
 		AvarageScore:        uint(avarageScore),
@@ -105,7 +111,8 @@ func (repository *QuizResultRepositoryImpl) QuizResultAnalysis(tx *gorm.DB, quiz
 		CoursesName:         courseName,
 		QuizName:            questionName,
 		QuestionCount:       questionCount,
-		CreatedAt:           CreatedAt,
+		CreatedAt:           CreatedAt.Format("2006-01-02"),
+		Duration:            duration,
 		Students:            students,
 	}
 

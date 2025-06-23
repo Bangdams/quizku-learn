@@ -9,6 +9,7 @@ type UserCourseListItem struct {
 	Course        CourseResponse  `json:"course" validate:"required"`
 	Classes       []ClassResponse `json:"classes" validate:"required"`
 	TotalStudents uint            `json:"total_students" validate:"required"`
+	TotalQuiz     uint            `json:"total_quiz" validate:"required"`
 }
 
 type UserCourseListResponse struct {

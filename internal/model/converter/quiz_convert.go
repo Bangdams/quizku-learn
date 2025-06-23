@@ -16,7 +16,7 @@ func QuizStudentToResponse(quiz *entity.Quiz) *model.QuizStudentResponse {
 		LecturerName:  quiz.Question.User.Name,
 		CourseName:    quiz.Course.Name,
 		QuestionName:  quiz.Question.Name,
-		Deadline:      quiz.Deadline,
+		Deadline:      quiz.Deadline.Format("2006-01-02"),
 		QuestionCount: quiz.Question.QuestionCount,
 		Duration:      quiz.Question.Duration,
 	}
@@ -28,10 +28,10 @@ func QuizHistoryStudentToResponse(quizResult *entity.QuizzResult) *model.QuizHis
 	return &model.QuizHistoryStudentResponse{
 		ID:         quizResult.QuizzId,
 		QuizName:   quizResult.Quiz.Question.Name,
-		CourseName: quizResult.Quiz.Course.Name,
+		CourseName: quizResult.Quiz.Question.Course.Name,
 		Score:      quizResult.Score,
 		Status:     quizResult.Status,
-		CreatedAt:  quizResult.CreatedAt,
+		CreatedAt:  quizResult.CreatedAt.Format("2006-01-02"),
 	}
 }
 
@@ -121,6 +121,7 @@ func QuizDashboardResponse(quiz *entity.Quiz) *model.QuizDashboardResponse {
 		QuestionCount: quiz.Question.QuestionCount,
 		StudentCount:  len(quiz.Class.UserClasses),
 		CreatedAt:     quiz.CreatedAt,
+		Deadline:      quiz.Deadline,
 	}
 }
 

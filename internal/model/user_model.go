@@ -62,5 +62,6 @@ type TokenPyload struct {
 	Email  string `json:"email"`
 	Name   string `json:"name"`
 	Role   string `json:"role"`
+	Image  string `json:"image"`
 	jwt.RegisteredClaims
 }

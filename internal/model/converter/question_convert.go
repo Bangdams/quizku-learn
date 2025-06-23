@@ -39,8 +39,9 @@ func QuestionToResponse(question *entity.Question) *model.QuestionResponse {
 		Name:          question.Name,
 		QuestionCount: question.QuestionCount,
 		Duration:      question.Duration,
-		CourseCode:    question.Duration,
+		CourseCode:    question.CourseCode,
 		UserId:        question.UserId,
+		CreatedAt:     question.CreatedAt,
 	}
 }
 

@@ -28,7 +28,7 @@ func CourseToResponses(courses *[]entity.Course) *[]model.CourseResponse {
 	return &courseResponses
 }
 
-func UserCourseListToResponse(courses *[]entity.Course, totalStudents *[]uint) *model.UserCourseListResponse {
+func UserCourseListToResponse(courses *[]entity.Course, totalStudents *[]uint, totalQuiz *[]uint) *model.UserCourseListResponse {
 	var dataItem model.UserCourseListItem
 	var dataItems []model.UserCourseListItem
 
@@ -42,6 +42,7 @@ func UserCourseListToResponse(courses *[]entity.Course, totalStudents *[]uint) *
 		}
 
 		dataItem.TotalStudents = (*totalStudents)[i]
+		dataItem.TotalQuiz = (*totalQuiz)[i]
 		dataItems = append(dataItems, dataItem)
 
 		// reset data class

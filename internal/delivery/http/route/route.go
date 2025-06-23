@@ -83,6 +83,7 @@ func (config *RouteConfig) Setup() {
 	lecturer.Get("/quizz-dashboard", config.QuizController.QuizDashboard)
 	lecturer.Post("/quizz", config.QuizController.Create)
 	lecturer.Delete("/quizz/:quiz_id", config.QuizController.Delete)
+	lecturer.Get("/quizzes/:quiz_id/results/analysis", config.QuizController.QuizResultAnalysis)
 
 	// API MAHASISWA
 	student := config.App.Group("/api-student", util.CheckLevel("mahasiswa"))
@@ -94,6 +95,7 @@ func (config *RouteConfig) Setup() {
 	student.Get("/quizzes/course/:course_code", config.QuizController.FindByUserAndCourse)
 	student.Get("/quizzes/:quiz_id/result", config.QuizController.QuizStudentResult)
 	student.Get("/quizzes/history", config.QuizController.GetQuizHistoryForStudent)
+	student.Get("/quizzes/:quiz_id/start", config.QuizController.StartQuiz)
 
 	// API user answer
 	student.Post("/quizzes/answer/:quiz_id", config.UserAnswerController.Create)
