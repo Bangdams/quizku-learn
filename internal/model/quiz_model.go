@@ -116,6 +116,7 @@ type QuestionItem struct {
 }
 
 type ChoiceItem struct {
-	Choice string `json:"choice" validate:"required"`
-	Answer string `json:"answer" validate:"required"`
+	AnswerId uint   `json:"answer_id" validate:"required"`
+	Choice   string `json:"choice" validate:"required"`
+	Answer   string `json:"answer" validate:"required"`
 }

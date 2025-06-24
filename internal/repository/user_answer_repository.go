@@ -26,9 +26,13 @@ func NewUserAnswerRepository() UserAnswerRepository {
 
 // GetUserAnswersByQuestion implements UserAnswerRepository.
 func (repository *UserAnswerRepositoryImpl) GetUserAnswersByQuestion(tx *gorm.DB, userAnswers *[]entity.UserAnswer, questionId uint, userId uint) error {
-	return tx.Preload("Answer.QuestionDetail", "question_details.question_id = ?", questionId).
+	return tx.Joins("JOIN answers ON answers.id = user_answers.answer_id").
+		Joins("JOIN question_details ON question_details.id = answers.question_detail_id").
 		Where("user_answers.user_id = ?", userId).
+		Where("question_details.question_id = ?", questionId).
+		Preload("Answer.QuestionDetail").
 		Find(&userAnswers).Error
+
 }
 
 // VerifyUserClassQuiz implements UserAnswerRepository.

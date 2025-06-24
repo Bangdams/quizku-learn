@@ -61,8 +61,9 @@ func (repository *QuizRepositoryImpl) StartQuiz(tx *gorm.DB, response *model.Sta
 
 		for _, choiceItem := range data.Answers {
 			choiceItems = append(choiceItems, model.ChoiceItem{
-				Choice: choiceItem.Choice,
-				Answer: choiceItem.Answer,
+				AnswerId: choiceItem.ID,
+				Choice:   choiceItem.Choice,
+				Answer:   choiceItem.Answer,
 			})
 		}
 
@@ -85,12 +86,18 @@ func (repository *QuizRepositoryImpl) FindAll(tx *gorm.DB, quizzes *[]entity.Qui
 
 // FindByUserAndCourse implements QuizRepository.
 func (repository *QuizRepositoryImpl) FindByUserAndCourse(tx *gorm.DB, quizzes *[]entity.Quiz, userId uint, courseCode string) error {
-
-	return tx.Joins("JOIN user_classes ON user_classes.class_id = quizzes.class_id").
+	return tx.
+		Joins("JOIN user_classes ON user_classes.class_id = quizzes.class_id").
 		Joins("JOIN courses ON quizzes.course_code = courses.course_code").
 		Joins("JOIN questions ON quizzes.question_id = questions.id").
 		Where("user_classes.user_id = ? AND courses.course_code = ?", userId, courseCode).
 		Where("quizzes.deadline > NOW()").
+		Where(`
+        NOT EXISTS (
+            SELECT 1 FROM quizz_results
+            WHERE quizz_results.quizz_id = quizzes.id AND quizz_results.user_id = ?
+        )
+    `, userId).
 		Preload("Class.UserClasses").
 		Preload("Course").
 		Preload("Question.User").

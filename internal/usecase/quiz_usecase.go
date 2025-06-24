@@ -246,6 +246,8 @@ func (quizUsecase *QuizUsecaseImpl) QuizStudentResult(ctx context.Context, userI
 	}
 
 	for i, element := range userAnswers {
+		log.Println(element.Answer.Choice)
+		log.Println(element.Answer.QuestionDetail)
 		questionDetailsId := element.Answer.QuestionDetail.ID
 		correctChoice := element.Answer.QuestionDetail.CorrectAnswer
 
