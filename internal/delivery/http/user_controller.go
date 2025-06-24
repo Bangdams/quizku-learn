@@ -17,6 +17,7 @@ import (
 type UserController interface {
 	Create(ctx *fiber.Ctx) error
 	Update(ctx *fiber.Ctx) error
+	UpdateForUser(ctx *fiber.Ctx) error
 	Delete(ctx *fiber.Ctx) error
 	FindAll(ctx *fiber.Ctx) error
 	FindByEmail(ctx *fiber.Ctx) error
@@ -265,10 +266,81 @@ func (controller *UserControllerImpl) Logout(ctx *fiber.Ctx) error {
 func (controller *UserControllerImpl) Update(ctx *fiber.Ctx) error {
 	request := new(model.UpdateUserRequest)
 
-	if err := ctx.BodyParser(request); err != nil {
-		log.Println("failed to parse request : ", err)
+	userId, err := strconv.Atoi(ctx.FormValue("id"))
+	if err != nil {
+		log.Println(userId)
+		log.Println("error badrequest")
 		return fiber.ErrBadRequest
 	}
+
+	request.ID = uint(userId)
+	request.Name = ctx.FormValue("name")
+	request.Email = ctx.FormValue("email")
+	request.Password = ctx.FormValue("password")
+
+	log.Println(request)
+
+	// upload image
+	file, err := ctx.FormFile("image")
+	if file != nil {
+		if err != nil {
+			log.Println("failed to parse request image : ", err)
+			return fiber.ErrBadRequest
+		}
+
+		filename := filepath.Base(file.Filename)
+		generateFilename := util.GenerateRandomFilename(filename)
+		savePath := filepath.Join("./upload", generateFilename)
+
+		if err := ctx.SaveFile(file, savePath); err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save image"})
+		}
+
+		request.Image = generateFilename
+	}
+	// end upload image
+
+	response, err := controller.UserUsecase.Update(ctx.UserContext(), request)
+	if err != nil {
+		log.Println("failed to update user")
+		return err
+	}
+
+	return ctx.JSON(model.WebResponse[*model.UserResponse]{Data: response})
+}
+
+// UpdateForUser implements UserController.
+func (controller *UserControllerImpl) UpdateForUser(ctx *fiber.Ctx) error {
+	request := new(model.UpdateUserRequest)
+
+	userToken := ctx.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(jwt.MapClaims)
+	userID := claims["user_id"].(float64)
+
+	request.ID = uint(userID)
+	request.Name = ctx.FormValue("name")
+	request.Email = ctx.FormValue("email")
+	request.Password = ctx.FormValue("password")
+
+	// upload image
+	file, err := ctx.FormFile("image")
+	if file != nil {
+		if err != nil {
+			log.Println("failed to parse request image : ", err)
+			return fiber.ErrBadRequest
+		}
+
+		filename := filepath.Base(file.Filename)
+		generateFilename := util.GenerateRandomFilename(filename)
+		savePath := filepath.Join("./upload", generateFilename)
+
+		if err := ctx.SaveFile(file, savePath); err != nil {
+			return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save image"})
+		}
+
+		request.Image = generateFilename
+	}
+	// end upload image
 
 	response, err := controller.UserUsecase.Update(ctx.UserContext(), request)
 	if err != nil {

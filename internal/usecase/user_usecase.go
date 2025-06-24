@@ -26,6 +26,7 @@ import (
 type UserUsecase interface {
 	Create(ctx context.Context, request *model.UserRequest) (*model.UserResponse, error)
 	Update(ctx context.Context, request *model.UpdateUserRequest) (*model.UserResponse, error)
+	UpdateForUser(ctx context.Context, request *model.UpdateUserRequest) (*model.UserResponse, error)
 	Delete(ctx context.Context, userId uint) error
 	FindAll(ctx context.Context, userId uint) (*[]model.UserResponse, error)
 	FindByRole(ctx context.Context, role string, userId uint) (*[]model.UserResponse, error)
@@ -554,7 +555,106 @@ func (userUsecase *UserUsecaseImpl) Update(ctx context.Context, request *model.U
 	}
 
 	user.Name = request.Name
-	user.Image = request.Image
+	if request.Image != "" {
+		user.Image = request.Image
+	}
+
+	log.Println(user)
+
+	err = userUsecase.UserRepo.Update(tx, user)
+	if err != nil {
+		mysqlErr := err.(*mysql.MySQLError)
+		log.Println("failed when update repo user : ", err)
+
+		var errorField string
+		parts := strings.Split(mysqlErr.Message, "'")
+		if len(parts) > 2 {
+			errorField = parts[1]
+		}
+
+		if mysqlErr.Number == 1062 {
+			errorResponse.Message = "Duplicate entry"
+			errorResponse.Details = []string{errorField + " already exists in the database."}
+
+			jsonString, _ := json.Marshal(errorResponse)
+
+			return nil, fiber.NewError(fiber.ErrConflict.Code, string(jsonString))
+		}
+
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		log.Println("Failed commit transaction : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	log.Println("success update from usecase user")
+
+	return converter.UserToResponse(user), nil
+}
+
+// UpdateForUser implements UserUsecase.
+func (userUsecase *UserUsecaseImpl) UpdateForUser(ctx context.Context, request *model.UpdateUserRequest) (*model.UserResponse, error) {
+	tx := userUsecase.DB.WithContext(ctx).Begin()
+	defer tx.Rollback()
+
+	errorResponse := &model.ErrorResponse{}
+
+	err := userUsecase.Validate.Struct(request)
+	if err != nil {
+		var validationErrors []string
+		for _, e := range err.(validator.ValidationErrors) {
+			msg := fmt.Sprintf("Field '%s' failed on '%s' rule", e.Field(), e.Tag())
+			validationErrors = append(validationErrors, msg)
+		}
+
+		errorResponse.Message = "invalid request parameter"
+		errorResponse.Details = validationErrors
+
+		jsonString, _ := json.Marshal(errorResponse)
+
+		log.Println("error update user : ", err)
+
+		return nil, fiber.NewError(fiber.ErrBadRequest.Code, string(jsonString))
+	}
+
+	user := &entity.User{
+		Email: request.Email,
+	}
+
+	err = userUsecase.UserRepo.FindByEmail(tx, user)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			errorResponse.Message = "User data was not found"
+			errorResponse.Details = []string{}
+
+			jsonString, _ := json.Marshal(errorResponse)
+			log.Println("Data not found")
+
+			return nil, fiber.NewError(fiber.ErrNotFound.Code, string(jsonString))
+		}
+
+		log.Println("error find by email : ", err)
+		return nil, fiber.ErrInternalServerError
+	}
+
+	if request.Password != "" {
+		password, err := bcrypt.GenerateFromPassword([]byte(request.Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Println("failed to generate password")
+			return nil, fiber.ErrInternalServerError
+		}
+
+		user.Password = string(password)
+	}
+
+	user.Name = request.Name
+	if request.Image != "" {
+		user.Image = request.Image
+	}
+
+	log.Println(user)
 
 	err = userUsecase.UserRepo.Update(tx, user)
 	if err != nil {

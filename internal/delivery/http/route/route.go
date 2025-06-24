@@ -107,6 +107,9 @@ func (config *RouteConfig) Setup() {
 		return ctx.SendFile(filepath)
 	})
 
+	// update password
+	config.App.Put("/api/update-user", config.UserController.UpdateForUser)
+
 	// Api for login
 	config.App.Post("/login", config.UserController.Login)
 	config.App.Post("/logout", config.UserController.Logout)

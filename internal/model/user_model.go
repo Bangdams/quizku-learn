@@ -45,7 +45,7 @@ type UpdateUserRequest struct {
 	Email    string `json:"email" validate:"required"`
 	Name     string `json:"name" validate:"required"`
 	Password string `json:"password"`
-	Image    string `json:"image" validate:"required"`
+	Image    string `json:"image"`
 }
 
 type LoginRequest struct {
