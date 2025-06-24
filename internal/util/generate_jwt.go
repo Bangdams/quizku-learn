@@ -26,6 +26,7 @@ func GenerateAccessToken(request *entity.User) (string, error) {
 	token.Email = request.Email
 	token.Name = request.Name
 	token.Role = request.Role
+	token.Image = request.Image
 
 	_token := jwt.NewWithClaims(jwt.SigningMethodHS256, token)
 	return _token.SignedString([]byte(os.Getenv("SECRET_KEY")))
@@ -47,6 +48,7 @@ func GenerateRefreshToken(request *entity.User) (string, error) {
 	token.Email = request.Email
 	token.Name = request.Name
 	token.Role = request.Role
+	token.Image = request.Image
 
 	_token := jwt.NewWithClaims(jwt.SigningMethodHS256, token)
 	return _token.SignedString([]byte(os.Getenv("SECRET_KEY")))

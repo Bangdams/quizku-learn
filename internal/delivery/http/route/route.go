@@ -72,6 +72,7 @@ func (config *RouteConfig) Setup() {
 	// API question
 	lecturer.Post("/questions", config.QuestionController.Create)
 	lecturer.Get("/question/:course_code", config.QuestionController.FindByCourseCode)
+	lecturer.Delete("/questions/:question_id", config.QuestionController.Delete)
 
 	// API courses
 	lecturer.Get("/courses-by-user-with-class", config.CourseController.ListCoursesByUserWithClass)
